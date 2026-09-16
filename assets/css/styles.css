@@ -1,0 +1,234 @@
+/* ============================================================
+   GREEN FARM FORTUNE (GFF) DESIGN TOKENS
+   ============================================================ */
+:root {
+  --primary-blue: #0033A0;
+  --primary-blue-dark: #002171;
+  --primary-blue-light: #E6F0FF;
+  
+  --accent-gold: #FFD700;
+  --accent-gold-dark: #D4AF37;
+  
+  --accent-red: #DC143C;
+  --accent-red-dark: #B01030;
+  
+  --success-green: #228B22;
+  --success-green-light: #32CD32;
+  --success-green-bg: #E8F5E9;
+  
+  --text-dark: #1A2E1A;
+  --text-muted: #6B7280;
+  --white: #FFFFFF;
+  --background-light: #F8FAF9;
+  --border-light: #E5E7EB;
+
+  --shadow-sm: 0 2px 8px rgba(0, 51, 160, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 51, 160, 0.12);
+  --shadow-lg: 0 16px 48px rgba(0, 51, 160, 0.18);
+  --shadow-gold: 0 8px 24px rgba(255, 215, 0, 0.3);
+
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--background-light);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; border: none; cursor: pointer; }
+input { font-family: inherit; }
+
+/* ============================================================
+   LAYOUT & CONTAINERS
+   ============================================================ */
+.auth-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ============================================================
+   AUTH HEADER & LOGO
+   ============================================================ */
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.logo-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--success-green), var(--success-green-light));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  border: 3px solid var(--accent-gold);
+}
+.logo-icon svg { width: 32px; height: 32px; fill: var(--white); }
+.logo-text {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary-blue);
+  letter-spacing: -0.02em;
+}
+.logo-text span { color: var(--accent-gold); }
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ============================================================
+   FORMS & CARDS
+   ============================================================ */
+.auth-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+}
+.form-group { margin-bottom: 20px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  color: var(--text-dark);
+  background: var(--background-light);
+  transition: all 0.2s var(--ease);
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: var(--white);
+  box-shadow: 0 0 0 4px rgba(0, 51, 160, 0.1);
+}
+.form-input::placeholder { color: #9CA3AF; }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s var(--ease);
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+.btn-primary:hover { box-shadow: var(--shadow-lg); }
+.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark));
+  color: var(--primary-blue-dark);
+  box-shadow: var(--shadow-gold);
+}
+
+/* ============================================================
+   FOOTER & LINKS
+   ============================================================ */
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.auth-footer a {
+  color: var(--primary-blue);
+  font-weight: 700;
+}
+.auth-footer a:hover { text-decoration: underline; }
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+  margin-top: -10px;
+}
+.forgot-link {
+  font-size: 13px;
+  color: var(--primary-blue);
+  font-weight: 600;
+}
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: none;
+}
+.alert.show { display: block; }
+.alert-error { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.alert-success { background: var(--success-green-bg); color: var(--success-green); border: 1px solid #BBF7D0; }
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+#toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-dark);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+  box-shadow: var(--shadow-lg);
+}
+#toast.show { opacity: 1; }
