@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    .page-wrap { max-width: 520px; margin: 0 auto; padding-bottom: 100px; }
+    .profile-header {
+      background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
+      color: var(--white); padding: 40px 20px 60px; text-align: center;
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%; background: var(--accent-gold);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+      font-family: 'Fraunces', serif; font-size: 32px; font-weight: 800; color: var(--primary-blue-dark);
+      border: 4px solid rgba(255,255,255,0.3);
+    }
+    .profile-name { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; }
+    .profile-email { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+    
+    .profile-card {
+      margin: -30px 20px 20px; background: var(--white); border-radius: var(--radius-lg);
+      padding: 24px; box-shadow: var(--shadow-md); border: 1px solid var(--border-light);
+    }
+    .profile-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+    .profile-value { font-size: 15px; font-weight: 600; color: var(--text-dark); }
+    
+    .btn-logout {
+      width: calc(100% - 40px); margin: 20px auto; display: block;
+      background: var(--accent-red); color: var(--white); padding: 16px;
+      border-radius: var(--radius-sm); font-weight: 700; font-size: 16px;
+      text-align: center; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar">U</div>
+      <div class="profile-name" id="profileName">User</div>
+      <div class="profile-email" id="profileEmail">user@example.com</div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-row">
+        <span class="profile-label">Referral Code</span>
+        <span class="profile-value" id="referralCode" style="color: var(--primary-blue); font-weight: 700;">---</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">VIP Level</span>
+        <span class="profile-value" id="vipLevel">Member</span>
+      </div>
+      <div class="profile-row" style="cursor: pointer;" onclick="window.location.href='/change-password'">
+        <span class="profile-label">Change Password</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="profile-row" style="cursor: pointer;" onclick="window.location.href='/bank'">
+        <span class="profile-label">Bank Details</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+
+    <div id="app-footer"></div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    (async function() {
+      const session = await AradelAuth.requireAuth();
+      if (!session) return;
+
+      const { data: profile } = await window.sb.from('users').select('*').eq('id', session.user.id).single();
+      if (profile) {
+        document.getElementById('profileName').textContent = profile.full_name;
+        document.getElementById('profileEmail').textContent = profile.email;
+        document.getElementById('profileAvatar').textContent = profile.full_name.charAt(0).toUpperCase();
+        document.getElementById('referralCode').textContent = profile.referral_code;
+        document.getElementById('vipLevel').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
+      }
+    })();
+
+    async function logout() {
+      await window.sb.auth.signOut();
+      window.location.href = '/login';
+    }
+  </script>
+</body>
+</html>
