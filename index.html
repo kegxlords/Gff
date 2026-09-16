@@ -44,10 +44,19 @@
   </div>
 
   <div id="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/supabase.js"></script>
-  <script src="assets/js/auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
   <script>
+    // Check if already logged in
+    (async function() {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const session = await window.sb.auth.getSession();
+      if (session.data.session) {
+        window.location.href = '/dashboard';
+      }
+    })();
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('loginBtn');
@@ -60,7 +69,11 @@
       try {
         await AradelAuth.login(email, password);
         AradelAuth.toast('Login successful!');
-        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+        
+        // Wait a moment for session to establish
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1000);
       } catch (err) {
         const alert = document.getElementById('errorAlert');
         document.getElementById('errorMessage').textContent = err.message;
