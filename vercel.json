@@ -2,25 +2,98 @@
   "version": 2,
   "builds": [
     {
+      "src": "**/*.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "api/**/*.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "assets/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/api/$1"
-    }
-  ],
-  "headers": [
+    },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
-      ]
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/register",
+      "dest": "/register.html"
+    },
+    {
+      "src": "/login",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "/profile",
+      "dest": "/profile.html"
+    },
+    {
+      "src": "/change-password",
+      "dest": "/change-password.html"
+    },
+    {
+      "src": "/bank",
+      "dest": "/bank.html"
+    },
+    {
+      "src": "/recharge",
+      "dest": "/recharge.html"
+    },
+    {
+      "src": "/withdraw",
+      "dest": "/withdraw.html"
+    },
+    {
+      "src": "/gift-code",
+      "dest": "/gift-code.html"
+    },
+    {
+      "src": "/refer",
+      "dest": "/refer.html"
+    },
+    {
+      "src": "/team",
+      "dest": "/team.html"
+    },
+    {
+      "src": "/investment",
+      "dest": "/investment.html"
+    },
+    {
+      "src": "/VIP",
+      "dest": "/VIP.html"
+    },
+    {
+      "src": "/transaction-history",
+      "dest": "/transaction-history.html"
+    },
+    {
+      "src": "/messages",
+      "dest": "/messages.html"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/admin/$1.html"
+    },
+    {
+      "src": "/(.*)\\.html",
+      "dest": "/$1.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1.html"
     }
   ]
 }
