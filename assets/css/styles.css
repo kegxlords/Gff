@@ -404,22 +404,74 @@ body {
 .empty-state { text-align: center; padding: 20px; color: #999; }
 .empty-state svg { width: 50px; height: 50px; margin: 0 auto 12px; opacity: 0.3; }
 
-/* --- Bottom Navigation (Shared Footer) --- */
+/* ============================================================
+   PREMIUM BOTTOM NAVIGATION
+   ============================================================ */
 .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid #E0E0E0;
-  padding: 10px 20px 20px;
-  display: flex;
-  justify-content: space-around; /* Distribute items evenly */
-  z-index: 100;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
   max-width: 520px;
-  margin: 0 auto; /* Center the container */
-  left: 50%; /* Center horizontally */
-  transform: translateX(-50%); /* Offset by half width */
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -10px 40px rgba(0, 51, 160, 0.06);
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 10px 26px 10px; /* Extra bottom padding for iPhone home bar */
+  z-index: 1000;
+  border-radius: 24px 24px 0 0; /* Premium rounded top corners */
+}
+
+.nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: #9CA3AF; /* Soft gray for inactive */
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.nav-link svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.3s ease;
+}
+
+/* Active State Styling */
+.nav-link.active {
+  color: var(--gff-blue); /* Royal Blue */
+  font-weight: 700;
+  background: rgba(0, 51, 160, 0.04); /* Very subtle blue background */
+}
+
+.nav-link.active svg {
+  stroke: var(--gff-blue);
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+/* The Premium Gold Dot Indicator */
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  background: var(--gff-gold);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Gold glow */
 }
 
 /* Alternative: If you want it full width on mobile */
