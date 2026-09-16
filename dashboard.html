@@ -7,222 +7,675 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <style>
-    /* Dashboard Specific Styles */
-    .page-wrap { max-width: 520px; margin: 0 auto; padding-bottom: 100px; }
-    
-    .app-header {
-      position: sticky; top: 0; z-index: 50;
-      display: flex; align-items: center; justify-content: space-between;
+    :root {
+      --gff-blue: #0033A0;
+      --gff-blue-dark: #002171;
+      --gff-gold: #FFD700;
+      --gff-gold-dark: #D4AF37;
+      --gff-red: #DC143C;
+      --gff-green: #228B22;
+      --gff-green-light: #32CD32;
+      --bg-cream: #FFFBF0;
+      --card-white: #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, var(--bg-cream) 0%, #FFF5E0 100%);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ========== TOP NAVIGATION ========== */
+    .top-nav {
+      background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
       padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0, 51, 160, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .greeting-eyebrow { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .greeting-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-top: 2px; }
-    .header-actions { display: flex; align-items: center; gap: 12px; }
-    .vip-badge {
-      font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 20px;
-      background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark));
-      color: var(--primary-blue-dark); box-shadow: var(--shadow-gold);
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
+
+    .logo-circle {
+      width: 45px;
+      height: 45px;
+      background: linear-gradient(135deg, var(--gff-green), var(--gff-green-light));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid var(--gff-gold);
+    }
+
+    .logo-circle svg {
+      width: 28px;
+      height: 28px;
+      fill: white;
+    }
+
+    .brand-text h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      color: var(--gff-gold);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-info {
+      text-align: right;
+      color: white;
+    }
+
+    .user-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .user-vip {
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+      margin-top: 2px;
+    }
+
     .icon-btn {
-      width: 40px; height: 40px; border-radius: 12px; background: var(--white);
-      border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center;
-      color: var(--text-dark); position: relative; cursor: pointer;
-    }
-    .notif-dot {
-      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
-      background: var(--accent-red); border-radius: 50%; border: 2px solid var(--white);
+      width: 42px;
+      height: 42px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+      position: relative;
+      backdrop-filter: blur(10px);
     }
 
-    .hero-card {
-      margin: 20px; padding: 28px 24px; border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-      color: var(--white); box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+    .badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: var(--gff-red);
+      border-radius: 50%;
+      border: 2px solid var(--gff-blue);
     }
-    .hero-card::before {
-      content: ''; position: absolute; top: -40px; right: -40px; width: 150px; height: 150px;
-      background: rgba(255, 215, 0, 0.15); border-radius: 50%;
-    }
-    .hero-label { font-size: 13px; font-weight: 600; opacity: 0.85; letter-spacing: 0.05em; text-transform: uppercase; }
-    .hero-amount { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 800; margin: 8px 0 16px; }
-    .hero-actions { display: flex; gap: 12px; margin-top: 20px; }
-    .hero-btn {
-      flex: 1; padding: 14px; border-radius: var(--radius-sm); font-weight: 700; font-size: 14px;
-      display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
-    }
-    .hero-btn.fill { background: var(--white); color: var(--primary-blue); }
-    .hero-btn.ghost { background: rgba(255, 255, 255, 0.15); color: var(--white); border: 1px solid rgba(255, 255, 255, 0.3); }
 
-    .section { padding: 0 20px; margin-bottom: 24px; }
-    .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; margin-bottom: 14px; color: var(--text-dark); }
-    
-    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .stat-box {
-      background: var(--white); border-radius: var(--radius-md); padding: 18px;
-      border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);
+    /* ========== WELCOME BANNER ========== */
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--gff-gold) 0%, var(--gff-gold-dark) 100%);
+      margin: 20px;
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3);
+      position: relative;
+      overflow: hidden;
     }
+
+    .welcome-banner::before {
+      content: '🌾';
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 80px;
+      opacity: 0.15;
+    }
+
+    .welcome-text h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      color: var(--gff-blue-dark);
+      margin-bottom: 6px;
+    }
+
+    .welcome-text p {
+      color: var(--gff-blue);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* ========== BALANCE CARD ========== */
+    .balance-card {
+      background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+      margin: 0 20px 24px;
+      padding: 28px;
+      border-radius: 24px;
+      color: white;
+      box-shadow: 0 12px 40px rgba(0, 51, 160, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .balance-label {
+      font-size: 13px;
+      opacity: 0.85;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .balance-amount {
+      font-family: 'Fraunces', serif;
+      font-size: 42px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .balance-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action-btn {
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .action-btn:active {
+      transform: scale(0.96);
+    }
+
+    .action-btn.primary {
+      background: var(--gff-gold);
+      color: var(--gff-blue-dark);
+    }
+
+    .action-btn.secondary {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* ========== QUICK STATS ========== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 0 20px 24px;
+    }
+
+    .stat-card {
+      background: var(--card-white);
+      padding: 18px 14px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--gff-gold);
+      transform: translateY(-3px);
+    }
+
     .stat-icon {
-      width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      margin-bottom: 10px;
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 10px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .stat-icon.deposit { background: var(--primary-blue-light); color: var(--primary-blue); }
-    .stat-icon.profit { background: var(--success-green-bg); color: var(--success-green); }
-    .stat-val { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--text-dark); }
-    .stat-lbl { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
 
-    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .quick-item {
-      display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px;
-      background: var(--white); border-radius: var(--radius-md); border: 1px solid var(--border-light);
-      cursor: pointer; text-align: center; transition: transform 0.2s;
-    }
-    .quick-item:active { transform: scale(0.95); }
-    .quick-icon {
-      width: 40px; height: 40px; border-radius: 12px; background: var(--primary-blue-light);
-      display: flex; align-items: center; justify-content: center; color: var(--primary-blue);
-    }
-    .quick-label { font-size: 11px; font-weight: 600; color: var(--text-dark); }
+    .stat-icon.deposit { background: #E3F2FD; color: #1976D2; }
+    .stat-icon.profit { background: #E8F5E9; color: #388E3C; }
+    .stat-icon.referral { background: #FFF3E0; color: #F57C00; }
 
+    .stat-value {
+      font-family: 'Fraunces', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ========== QUICK ACTIONS ========== */
+    .section-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      color: var(--gff-blue-dark);
+      padding: 0 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(180deg, var(--gff-gold), var(--gff-gold-dark));
+      border-radius: 2px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 0 20px 24px;
+    }
+
+    .action-card {
+      background: var(--card-white);
+      padding: 20px;
+      border-radius: 18px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .action-card:hover {
+      border-color: var(--gff-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,51,160,0.15);
+    }
+
+    .action-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    .action-card:nth-child(1) .action-icon { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
+    .action-card:nth-child(2) .action-icon { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); }
+    .action-card:nth-child(3) .action-icon { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); }
+    .action-card:nth-child(4) .action-icon { background: linear-gradient(135deg, #FCE4EC, #F8BBD9); }
+
+    .action-title {
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      margin-bottom: 4px;
+    }
+
+    .action-desc {
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* ========== INVESTMENT PREVIEW ========== */
+    .investment-preview {
+      background: var(--card-white);
+      margin: 0 20px 24px;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .preview-title {
+      font-family: 'Fraunces', serif;
+      font-size: 18px;
+      color: var(--gff-blue-dark);
+      font-weight: 700;
+    }
+
+    .view-all {
+      color: var(--gff-blue);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #999;
+    }
+
+    .empty-state svg {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 12px;
+      opacity: 0.3;
+    }
+
+    /* ========== BOTTOM NAV ========== */
     .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; max-width: 520px; margin: 0 auto;
-      background: var(--white); border-top: 1px solid var(--border-light);
-      display: flex; justify-content: space-around; padding: 12px 0 20px; z-index: 100;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid #E0E0E0;
+      padding: 12px 20px 20px;
+      display: flex;
+      justify-content: space-around;
+      z-index: 100;
     }
-    .nav-item {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer;
+
+    .nav-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #999;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      transition: color 0.2s;
     }
-    .nav-item.active { color: var(--primary-blue); }
-    .nav-item.active svg { stroke: var(--primary-blue); }
+
+    .nav-link.active {
+      color: var(--gff-blue);
+    }
+
+    .nav-link svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--gff-blue-dark);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <div class="page-wrap">
-    <div id="app-header"></div>
-
-    <!-- Hero Wallet Card -->
-    <section class="hero-card">
-      <div class="hero-label">Total Balance</div>
-      <div class="hero-amount" id="walletBalance">₦0.00</div>
-      <div class="hero-actions">
-        <button class="hero-btn fill" onclick="window.location.href='/recharge'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Deposit
-        </button>
-        <button class="hero-btn ghost" onclick="window.location.href='/withdraw'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          Withdraw
-        </button>
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="logo-section">
+      <div class="logo-circle">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
-    </section>
-
-    <!-- Stats Row -->
-    <section class="section">
-      <div class="stats-row">
-        <div class="stat-box">
-          <div class="stat-icon deposit">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          </div>
-          <div class="stat-val" id="statDeposit">₦0</div>
-          <div class="stat-lbl">Total Deposit</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-icon profit">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 17"/><polyline points="17 6 23 6 23 12"/></svg>
-          </div>
-          <div class="stat-val" id="statProfit">₦0</div>
-          <div class="stat-lbl">Total Profit</div>
-        </div>
+      <div class="brand-text">
+        <h1>GREEN FARM <span>FORTUNE</span></h1>
       </div>
-    </section>
-
-    <!-- Quick Actions -->
-    <section class="section">
-      <div class="section-title">Quick Actions</div>
-      <div class="quick-grid">
-        <div class="quick-item" onclick="window.location.href='/recharge'">
-          <div class="quick-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
-          <div class="quick-label">Deposit</div>
-        </div>
-        <div class="quick-item" onclick="window.location.href='/withdraw'">
-          <div class="quick-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
-          <div class="quick-label">Withdraw</div>
-        </div>
-        <div class="quick-item" onclick="window.location.href='/team'">
-          <div class="quick-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="quick-label">Team</div>
-        </div>
-        <div class="quick-item" onclick="window.location.href='/investment'">
-          <div class="quick-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
-          <div class="quick-label">Investments</div>
-        </div>
+    </div>
+    <div class="nav-actions">
+      <div class="user-info">
+        <div class="user-name" id="userName">User</div>
+        <div class="user-vip" id="userVip">Member</div>
       </div>
-    </section>
+      <button class="icon-btn" onclick="window.location.href='/messages'">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="badge" id="msgBadge" style="display:none;"></span>
+      </button>
+    </div>
+  </nav>
 
-    <div id="app-footer"></div>
+  <!-- Welcome Banner -->
+  <div class="welcome-banner">
+    <div class="welcome-text">
+      <h2>Welcome Back! 🌱</h2>
+      <p>Grow Today • Harvest Tomorrow • Live Better</p>
+    </div>
   </div>
 
+  <!-- Balance Card -->
+  <div class="balance-card">
+    <div class="balance-label">Total Balance</div>
+    <div class="balance-amount" id="walletBalance">₦0.00</div>
+    <div class="balance-actions">
+      <button class="action-btn primary" onclick="window.location.href='/recharge'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Deposit
+      </button>
+      <button class="action-btn secondary" onclick="window.location.href='/withdraw'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Withdraw
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon deposit">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </div>
+      <div class="stat-value" id="statDeposit">₦0</div>
+      <div class="stat-label">Total Deposit</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon profit">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 17"/>
+        </svg>
+      </div>
+      <div class="stat-value" id="statProfit">₦0</div>
+      <div class="stat-label">Total Profit</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon referral">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="stat-value" id="statReferral">₦0</div>
+      <div class="stat-label">Referrals</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <h3 class="section-title">Quick Actions</h3>
+  <div class="actions-grid">
+    <div class="action-card" onclick="window.location.href='/VIP'">
+      <div class="action-icon">🌾</div>
+      <div class="action-title">Invest Now</div>
+      <div class="action-desc">Choose VIP packages</div>
+    </div>
+    <div class="action-card" onclick="window.location.href='/investment'">
+      <div class="action-icon">📊</div>
+      <div class="action-title">My Investments</div>
+      <div class="action-desc">View active plans</div>
+    </div>
+    <div class="action-card" onclick="window.location.href='/team'">
+      <div class="action-icon">👥</div>
+      <div class="action-title">My Team</div>
+      <div class="action-desc">Earn 22% commission</div>
+    </div>
+    <div class="action-card" onclick="window.location.href='/transaction-history'">
+      <div class="action-icon">📋</div>
+      <div class="action-title">Transactions</div>
+      <div class="action-desc">View history</div>
+    </div>
+  </div>
+
+  <!-- Investment Preview -->
+  <div class="investment-preview">
+    <div class="preview-header">
+      <div class="preview-title">Active Investments</div>
+      <div class="view-all" onclick="window.location.href='/investment'">View All →</div>
+    </div>
+    <div id="activeInvestments">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        </svg>
+        <p>No active investments yet</p>
+        <button class="action-btn primary" style="margin-top:12px;width:100%" onclick="window.location.href='/VIP'">
+          Start Investing
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="/dashboard" class="nav-link active">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </a>
+    <a href="/VIP" class="nav-link">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Invest
+    </a>
+    <a href="/team" class="nav-link">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Team
+    </a>
+    <a href="/profile" class="nav-link">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </a>
+  </nav>
+
   <div id="toast"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/supabase.js"></script>
   <script src="/assets/js/auth.js"></script>
-  <script src="/assets/js/components.js"></script>
   <script>
-    // Dashboard Logic - Wait for DOM and Supabase to be ready
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Wait a bit for Supabase to initialize
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+    (async function() {
       const session = await AradelAuth.getSession();
-      
       if (!session) {
-        console.log('No session found on dashboard');
-        // Don't redirect immediately - give it a moment
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        window.location.href = '/';
         return;
       }
-      
-      console.log('Session found:', session.user.email);
-      
-      const uid = session.user.id;
-      
-      try {
-        // Fetch Wallet
-        const { data: wallet, error: walletError } = await window.sb
-          .from('wallets')
-          .select('*')
-          .eq('user_id', uid)
-          .single();
-        
-        if (walletError) {
-          console.error('Wallet fetch error:', walletError);
-        } else if (wallet) {
-          document.getElementById('walletBalance').textContent = '₦' + Number(wallet.balance).toLocaleString();
-          document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit || 0).toLocaleString();
-          document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit || 0).toLocaleString();
-        }
 
-        // Fetch User Profile for Name & VIP
-        const { data: profile, error: profileError } = await window.sb
-          .from('users')
-          .select('full_name, vip_level')
-          .eq('id', uid)
-          .single();
-        
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-        } else if (profile) {
-          document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
-          document.getElementById('vipBadge').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
-        }
-      } catch (error) {
-        console.error('Dashboard data fetch error:', error);
+      const uid = session.user.id;
+
+      // Fetch user data
+      const { data: profile } = await window.sb.from('users').select('*').eq('id', uid).single();
+      const { data: wallet } = await window.sb.from('wallets').select('*').eq('user_id', uid).single();
+
+      if (profile) {
+        document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
+        document.getElementById('userVip').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
       }
-    });
+
+      if (wallet) {
+        document.getElementById('walletBalance').textContent = '₦' + Number(wallet.balance).toLocaleString();
+        document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit || 0).toLocaleString();
+        document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit || 0).toLocaleString();
+        document.getElementById('statReferral').textContent = '₦' + Number(wallet.total_referral_earnings || 0).toLocaleString();
+      }
+
+      // Fetch active investments
+      const { data: investments } = await window.sb
+        .from('user_products')
+        .select('*, products(name)')
+        .eq('user_id', uid)
+        .eq('status', 'active')
+        .limit(3);
+
+      if (investments && investments.length > 0) {
+        const container = document.getElementById('activeInvestments');
+        container.innerHTML = investments.map(inv => `
+          <div style="background:#f5f5f5;padding:14px;border-radius:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-weight:700;color:var(--gff-blue-dark)">${inv.products?.name || 'Investment'}</div>
+                <div style="font-size:12px;color:#666;margin-top:2px">${inv.days_collected || 0}/30 days</div>
+              </div>
+              <div style="font-weight:700;color:var(--gff-green)">+₦${Number(inv.daily_income).toLocaleString()}/day</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Check unread messages
+      const { count } = await window.sb
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', uid)
+        .eq('is_read', false);
+
+      if (count > 0) {
+        const badge = document.getElementById('msgBadge');
+        badge.style.display = 'block';
+      }
+    })();
   </script>
 </body>
 </html>
