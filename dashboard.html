@@ -170,28 +170,59 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
-    // Dashboard Logic
-    (async function() {
-      const session = await AradelAuth.requireAuth();
-      if (!session) return;
-
+    // Dashboard Logic - Wait for DOM and Supabase to be ready
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Wait a bit for Supabase to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const session = await AradelAuth.getSession();
+      
+      if (!session) {
+        console.log('No session found on dashboard');
+        // Don't redirect immediately - give it a moment
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+        return;
+      }
+      
+      console.log('Session found:', session.user.email);
+      
       const uid = session.user.id;
       
-      // Fetch Wallet
-      const { data: wallet } = await window.sb.from('wallets').select('*').eq('user_id', uid).single();
-      if (wallet) {
-        document.getElementById('walletBalance').textContent = '₦' + Number(wallet.balance).toLocaleString();
-        document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit).toLocaleString();
-        document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit).toLocaleString();
-      }
+      try {
+        // Fetch Wallet
+        const { data: wallet, error: walletError } = await window.sb
+          .from('wallets')
+          .select('*')
+          .eq('user_id', uid)
+          .single();
+        
+        if (walletError) {
+          console.error('Wallet fetch error:', walletError);
+        } else if (wallet) {
+          document.getElementById('walletBalance').textContent = '₦' + Number(wallet.balance).toLocaleString();
+          document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit || 0).toLocaleString();
+          document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit || 0).toLocaleString();
+        }
 
-      // Fetch User Profile for Name & VIP
-      const { data: profile } = await window.sb.from('users').select('full_name, vip_level').eq('id', uid).single();
-      if (profile) {
-        document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
-        document.getElementById('vipBadge').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
+        // Fetch User Profile for Name & VIP
+        const { data: profile, error: profileError } = await window.sb
+          .from('users')
+          .select('full_name, vip_level')
+          .eq('id', uid)
+          .single();
+        
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else if (profile) {
+          document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
+          document.getElementById('vipBadge').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
+        }
+      } catch (error) {
+        console.error('Dashboard data fetch error:', error);
       }
-    })();
+    });
   </script>
 </body>
 </html>
