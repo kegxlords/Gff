@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - Green Farm Fortune</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
   <style>
     /* ============================================================
-       GFF FLYER COLOR PALETTE & DESIGN TOKENS
+       GFF DASHBOARD SPECIFIC STYLES
        ============================================================ */
     :root {
       --gff-blue: #0033A0;
@@ -17,340 +18,537 @@
       --gff-red: #DC143C;
       --gff-green: #228B22;
       --gff-green-light: #32CD32;
-      --bg-light: #F4F7FA;
-      --text-dark: #1A1A1A;
-      --text-muted: #6B7280;
-      --white: #FFFFFF;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-      --shadow-sm: 0 4px 12px rgba(0, 51, 160, 0.08);
-      --shadow-gold: 0 8px 24px rgba(255, 215, 0, 0.25);
+      --gff-bg: #F4F7F6;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
+      background: var(--gff-bg);
       font-family: 'Inter', sans-serif;
-      background: var(--bg-light);
-      color: var(--text-dark);
-      padding-bottom: 40px;
+      margin: 0;
+      padding-bottom: 90px;
+      color: #1A2E1A;
     }
 
-    /* --- Simple Inline Top Bar --- */
-    .gff-topbar {
-      background: var(--white);
-      padding: 16px 20px;
+    .gff-main {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* --- Greeting Section --- */
+    .gff-greeting {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #E5E7EB;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      padding: 20px 20px 10px;
     }
-    .gff-logo-text {
-      font-family: 'Fraunces', serif;
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--gff-blue);
-    }
-    .gff-logo-text span { color: var(--gff-gold); }
-    .gff-user-menu {
+    .gff-user-info {
       display: flex;
       align-items: center;
       gap: 12px;
     }
     .gff-avatar {
-      width: 36px; height: 36px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
-      background: var(--gff-green);
+      background: linear-gradient(135deg, var(--gff-green), var(--gff-green-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--gff-gold);
+      font-size: 20px;
       color: white;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 14px;
+      font-weight: 800;
     }
-
-    /* --- Main Container --- */
-    .gff-container {
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 20px;
+    .gff-text h2 {
+      font-size: 13px;
+      color: #6B7280;
+      font-weight: 500;
+      margin: 0;
+    }
+    .gff-text p {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gff-blue-dark);
+      margin: 2px 0 0;
     }
 
     /* --- Wallet Card --- */
     .gff-wallet {
       background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
-      border-radius: var(--radius-lg);
-      padding: 28px 24px;
+      margin: 16px 20px;
+      padding: 26px 22px;
+      border-radius: 24px;
       color: white;
       position: relative;
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 24px;
+      box-shadow: 0 12px 35px rgba(0, 51, 160, 0.35);
     }
-    .gff-wallet::after {
-      content: ''; position: absolute; top: -40px; right: -40px;
-      width: 150px; height: 150px;
-      background: radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%);
+    .gff-wallet::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%);
       border-radius: 50%;
     }
-    .gff-wallet-label {
-      font-size: 13px; opacity: 0.85; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 8px;
+    .gff-wallet-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
-    .gff-wallet-balance {
+    .gff-wallet-label {
+      font-size: 13px;
+      opacity: 0.85;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gff-wallet-label button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .gff-wallet-label button svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+    .gff-wallet-amount {
       font-family: 'Fraunces', serif;
-      font-size: 42px; font-weight: 800;
-      margin-bottom: 20px; letter-spacing: -1px;
+      font-size: 42px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+    .gff-member-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.12);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 22px;
+      backdrop-filter: blur(4px);
     }
     .gff-wallet-actions {
-      display: flex; gap: 12px;
+      display: flex;
+      gap: 12px;
     }
     .gff-btn {
-      flex: 1; padding: 14px; border-radius: 14px;
-      font-weight: 700; font-size: 14px; border: none;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-      font-family: inherit; transition: transform 0.2s;
+      flex: 1;
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      transition: transform 0.2s;
     }
     .gff-btn:active { transform: scale(0.96); }
-    .gff-btn-gold { background: var(--gff-gold); color: var(--gff-blue-dark); }
-    .gff-btn-outline { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); }
-
-    /* --- Stats Row --- */
-    .gff-stats {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-      margin-bottom: 24px;
+    .gff-btn-gold {
+      background: var(--gff-gold);
+      color: var(--gff-blue-dark);
     }
-    .gff-stat-card {
-      background: var(--white); padding: 16px 12px;
-      border-radius: var(--radius-md); text-align: center;
-      box-shadow: var(--shadow-sm);
-    }
-    .gff-stat-val {
-      font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700;
-      color: var(--gff-blue-dark); margin-bottom: 4px;
-    }
-    .gff-stat-lbl { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-    .gff-stat-card:nth-child(1) .gff-stat-val { color: var(--gff-blue); }
-    .gff-stat-card:nth-child(2) .gff-stat-val { color: var(--gff-green); }
-    .gff-stat-card:nth-child(3) .gff-stat-val { color: var(--gff-gold-dark); }
-
-    /* --- Sectors Banner (From Flyer) --- */
-    .gff-sectors {
-      background: var(--white);
-      border-radius: var(--radius-md);
-      padding: 16px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-sm);
-      border-left: 4px solid var(--gff-green);
-    }
-    .gff-sectors-title {
-      font-size: 12px; font-weight: 700; color: var(--gff-blue);
-      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
-    }
-    .gff-sectors-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-    }
-    .gff-sector-item {
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      font-size: 10px; font-weight: 600; color: var(--text-muted); text-align: center;
-    }
-    .gff-sector-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      background: #F0FDF4; display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+    .gff-btn-glass {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
     }
 
     /* --- Quick Actions --- */
-    .gff-actions-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-      margin-bottom: 24px;
+    .gff-actions-row {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 20px 24px;
     }
     .gff-action-item {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
       cursor: pointer;
     }
-    .gff-action-icon {
-      width: 52px; height: 52px; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--white); box-shadow: var(--shadow-sm);
+    .gff-action-circle {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: transform 0.2s;
     }
-    .gff-action-item:active .gff-action-icon { transform: scale(0.92); }
-    .gff-action-icon svg { width: 24px; height: 24px; stroke-width: 2; fill: none; }
-    .gff-action-item:nth-child(1) .gff-action-icon svg { stroke: var(--gff-blue); }
-    .gff-action-item:nth-child(2) .gff-action-icon svg { stroke: var(--gff-green); }
-    .gff-action-item:nth-child(3) .gff-action-icon svg { stroke: var(--gff-gold-dark); }
-    .gff-action-item:nth-child(4) .gff-action-icon svg { stroke: var(--gff-red); }
-    .gff-action-label { font-size: 11px; font-weight: 600; color: var(--text-dark); }
+    .gff-action-item:active .gff-action-circle { transform: scale(0.92); }
+    .gff-action-circle svg { width: 24px; height: 24px; stroke-width: 2; fill: none; }
+    
+    .gff-action-item:nth-child(1) .gff-action-circle { background: #E3F2FD; }
+    .gff-action-item:nth-child(1) .gff-action-circle svg { stroke: var(--gff-blue); }
+    .gff-action-item:nth-child(2) .gff-action-circle { background: #E8F5E9; }
+    .gff-action-item:nth-child(2) .gff-action-circle svg { stroke: var(--gff-green); }
+    .gff-action-item:nth-child(3) .gff-action-circle { background: #FFF8E1; }
+    .gff-action-item:nth-child(3) .gff-action-circle svg { stroke: var(--gff-gold-dark); }
+    .gff-action-item:nth-child(4) .gff-action-circle { background: #FCE4EC; }
+    .gff-action-item:nth-child(4) .gff-action-circle svg { stroke: var(--gff-red); }
+    
+    .gff-action-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #374151;
+    }
 
-    /* --- Section Header --- */
+    /* --- Live Ticker --- */
+    .gff-ticker {
+      background: linear-gradient(90deg, #F0FDF4 0%, #DCFCE7 100%);
+      margin: 0 20px 24px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #BBF7D0;
+      overflow: hidden;
+    }
+    .gff-ticker-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #166534;
+      font-weight: 600;
+      white-space: nowrap;
+      animation: ticker 18s linear infinite;
+    }
+    .gff-ticker-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--gff-green);
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes ticker {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* --- Section Headers --- */
     .gff-section-head {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px 14px;
     }
-    .gff-section-title {
-      font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--gff-blue-dark);
+    .gff-section-head h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      margin: 0;
     }
-    .gff-see-all { font-size: 13px; color: var(--gff-blue); font-weight: 700; text-decoration: none; }
+    .gff-section-head a {
+      font-size: 13px;
+      color: var(--gff-blue);
+      font-weight: 700;
+      text-decoration: none;
+    }
 
-    /* --- Active Farms (Investments) --- */
+    /* --- Package Cards (Horizontal Scroll) --- */
+    .gff-packages-scroll {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .gff-packages-scroll::-webkit-scrollbar { display: none; }
+    .gff-pkg-card {
+      flex-shrink: 0;
+      width: 150px;
+      background: white;
+      border-radius: 18px;
+      padding: 16px 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+      border: 1px solid #F3F4F6;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .gff-pkg-card:hover {
+      border-color: var(--gff-gold);
+      transform: translateY(-2px);
+    }
+    .gff-pkg-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark);
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+    .gff-pkg-earning {
+      font-family: 'Fraunces', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gff-green);
+      margin-bottom: 4px;
+    }
+    .gff-pkg-earning span {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+    .gff-pkg-detail {
+      font-size: 11px;
+      color: #6B7280;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .gff-pkg-detail strong {
+      color: var(--gff-blue-dark);
+      font-size: 13px;
+    }
+
+    /* --- Active Farms --- */
+    .gff-farms-list {
+      padding: 0 20px;
+    }
     .gff-farm-card {
-      background: var(--white); border-radius: var(--radius-md);
-      padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm);
-      border-top: 3px solid var(--gff-green);
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      border-left: 4px solid var(--gff-green);
     }
-    .gff-farm-head {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    .gff-farm-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
-    .gff-farm-name { font-weight: 700; color: var(--gff-blue-dark); font-size: 15px; }
-    .gff-farm-badge {
-      background: #DCFCE7; color: #166534; padding: 4px 10px;
-      border-radius: 12px; font-size: 11px; font-weight: 700;
+    .gff-farm-name {
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      font-size: 15px;
+    }
+    .gff-farm-status {
+      background: #DCFCE7;
+      color: #166534;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
     }
     .gff-farm-progress {
-      background: #F3F4F6; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 10px;
+      background: #F3F4F6;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
     }
     .gff-farm-bar {
-      height: 100%; background: linear-gradient(90deg, var(--gff-green), var(--gff-green-light));
-      border-radius: 3px;
+      height: 100%;
+      background: linear-gradient(90deg, var(--gff-green), var(--gff-green-light));
+      border-radius: 4px;
     }
-    .gff-farm-foot {
-      display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);
+    .gff-farm-bottom {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #6B7280;
     }
-    .gff-farm-earning { font-weight: 700; color: var(--gff-green); font-size: 14px; }
+    .gff-farm-bottom strong {
+      color: var(--gff-green);
+      font-size: 14px;
+    }
 
-    /* Empty State */
     .gff-empty {
-      text-align: center; padding: 30px 20px; background: var(--white);
-      border-radius: var(--radius-md); border: 2px dashed #E5E7EB;
+      text-align: center;
+      padding: 30px 20px;
+      background: white;
+      border-radius: 16px;
+      border: 2px dashed #E5E7EB;
     }
-    .gff-empty p { color: var(--text-muted); margin-bottom: 16px; font-size: 14px; }
-    .gff-empty-btn {
-      background: var(--gff-blue); color: white; border: none;
-      padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer;
+    .gff-empty svg {
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 12px;
+      stroke: #D1D5DB;
+      stroke-width: 1.5;
+      fill: none;
     }
-
-    #toast {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-      background: var(--gff-blue-dark); color: white; padding: 12px 24px;
-      border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 1000;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    .gff-empty p {
+      color: #6B7280;
+      font-size: 14px;
+      margin: 0 0 16px;
     }
-    #toast.show { opacity: 1; }
+    .gff-empty button {
+      background: var(--gff-blue);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
+  <div class="gff-main">
+    <!-- Shared Header Placeholder -->
+    <div id="app-header"></div>
 
-  <!-- Simple Inline Top Bar -->
-  <header class="gff-topbar">
-    <div class="gff-logo-text">GREEN FARM <span>FORTUNE</span></div>
-    <div class="gff-user-menu">
-      <div class="gff-avatar" id="userAvatar">U</div>
+    <!-- Greeting -->
+    <div class="gff-greeting">
+      <div class="gff-user-info">
+        <div class="gff-avatar" id="userAvatar">F</div>
+        <div class="gff-text">
+          <h2 id="greetingTime">Good morning</h2>
+          <p id="userName">Farmer</p>
+        </div>
+      </div>
     </div>
-  </header>
 
-  <div class="gff-container">
-    
     <!-- Wallet Card -->
     <div class="gff-wallet">
-      <div class="gff-wallet-label">
-        Total Balance
-        <button onclick="toggleBalance()" style="background:none;border:none;color:white;cursor:pointer;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+      <div class="gff-wallet-top">
+        <div class="gff-wallet-label">
+          Total Balance
+          <button onclick="toggleBalance()" id="eyeBtn">
+            <svg viewBox="0 0 24 24" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="gff-wallet-balance" id="walletBalance">₦0.00</div>
+      <div class="gff-wallet-amount" id="walletBalance">₦0.00</div>
+      <div class="gff-member-pill">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="memberId">Member • GFF000000</span>
+      </div>
       <div class="gff-wallet-actions">
         <button class="gff-btn gff-btn-gold" onclick="window.location.href='/recharge'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Deposit
         </button>
-        <button class="gff-btn gff-btn-outline" onclick="window.location.href='/withdraw'">
+        <button class="gff-btn gff-btn-glass" onclick="window.location.href='/withdraw'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           Withdraw
         </button>
       </div>
     </div>
 
-    <!-- Stats Row -->
-    <div class="gff-stats">
-      <div class="gff-stat-card">
-        <div class="gff-stat-val" id="statDeposit">₦0</div>
-        <div class="gff-stat-lbl">Deposited</div>
-      </div>
-      <div class="gff-stat-card">
-        <div class="gff-stat-val" id="statProfit">₦0</div>
-        <div class="gff-stat-lbl">Profit</div>
-      </div>
-      <div class="gff-stat-card">
-        <div class="gff-stat-val" id="statReferral">₦0</div>
-        <div class="gff-stat-lbl">Referral</div>
-      </div>
-    </div>
-
-    <!-- Sectors Banner (From Flyer) -->
-    <div class="gff-sectors">
-      <div class="gff-sectors-title">We Invest In Quality Assets</div>
-      <div class="gff-sectors-grid">
-        <div class="gff-sector-item">
-          <div class="gff-sector-icon">🌾</div>
-          <span>Crop</span>
-        </div>
-        <div class="gff-sector-item">
-          <div class="gff-sector-icon">🐄</div>
-          <span>Livestock</span>
-        </div>
-        <div class="gff-sector-item">
-          <div class="gff-sector-icon"></div>
-          <span>Poultry</span>
-        </div>
-        <div class="gff-sector-item">
-          <div class="gff-sector-icon">🏡</div>
-          <span>Greenhouse</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Quick Actions -->
-    <div class="gff-actions-grid">
-      <div class="gff-action-item" onclick="window.location.href='/VIP'">
-        <div class="gff-action-icon">
-          <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    <div class="gff-actions-row">
+      <div class="gff-action-item" onclick="window.location.href='/recharge'">
+        <div class="gff-action-circle">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </div>
-        <div class="gff-action-label">Invest</div>
+        <div class="gff-action-label">Recharge</div>
       </div>
-      <div class="gff-action-item" onclick="window.location.href='/team'">
-        <div class="gff-action-icon">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <div class="gff-action-item" onclick="window.location.href='/withdraw'">
+        <div class="gff-action-circle">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
-        <div class="gff-action-label">Team</div>
+        <div class="gff-action-label">Withdraw</div>
       </div>
       <div class="gff-action-item" onclick="window.location.href='/gift-code'">
-        <div class="gff-action-icon">
-          <svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/></svg>
+        <div class="gff-action-circle">
+          <svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/></svg>
         </div>
         <div class="gff-action-label">Gift Code</div>
       </div>
       <div class="gff-action-item" onclick="window.location.href='/transaction-history'">
-        <div class="gff-action-icon">
+        <div class="gff-action-circle">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <div class="gff-action-label">History</div>
       </div>
     </div>
 
-    <!-- Active Investments -->
-    <div class="gff-section-head">
-      <div class="gff-section-title">My Active Farms</div>
-      <a href="/investment" class="gff-see-all">View All</a>
-    </div>
-    
-    <div id="activeInvestments">
-      <div class="gff-empty">
-        <p>No active farms yet. Start growing your fortune!</p>
-        <button class="gff-empty-btn" onclick="window.location.href='/VIP'">Invest Now</button>
+    <!-- Live Ticker -->
+    <div class="gff-ticker">
+      <div class="gff-ticker-inner">
+        <span class="gff-ticker-dot"></span>
+        <span>LIVE: Farmer***2 just withdrew ₦15,000 • User***8 earned ₦3,000 daily income • New member joined from Lagos</span>
       </div>
     </div>
 
+    <!-- Investment Packages Preview -->
+    <div class="gff-section-head">
+      <h3>Investment Packages</h3>
+      <a href="/VIP">View All →</a>
+    </div>
+    <div class="gff-packages-scroll">
+      <div class="gff-pkg-card" onclick="window.location.href='/VIP'">
+        <div class="gff-pkg-badge">VIP 1</div>
+        <div class="gff-pkg-earning">₦900 <span>/day</span></div>
+        <div class="gff-pkg-detail">
+          <strong>₦3,000</strong><br>
+          30 days • 27,000 total
+        </div>
+      </div>
+      <div class="gff-pkg-card" onclick="window.location.href='/VIP'">
+        <div class="gff-pkg-badge">VIP 3</div>
+        <div class="gff-pkg-earning">₦3,000 <span>/day</span></div>
+        <div class="gff-pkg-detail">
+          <strong>₦10,000</strong><br>
+          30 days • ₦90,000 total
+        </div>
+      </div>
+      <div class="gff-pkg-card" onclick="window.location.href='/VIP'">
+        <div class="gff-pkg-badge">VIP 5</div>
+        <div class="gff-pkg-earning">₦15,150 <span>/day</span></div>
+        <div class="gff-pkg-detail">
+          <strong>₦50,000</strong><br>
+          30 days • ₦454,500 total
+        </div>
+      </div>
+      <div class="gff-pkg-card" onclick="window.location.href='/VIP'">
+        <div class="gff-pkg-badge">VIP 7</div>
+        <div class="gff-pkg-earning">₦39,000 <span>/day</span></div>
+        <div class="gff-pkg-detail">
+          <strong>₦130,000</strong><br>
+          30 days • ₦1.17M total
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Farms -->
+    <div class="gff-section-head">
+      <h3>My Active Farms</h3>
+      <a href="/investment">View All →</a>
+    </div>
+    <div class="gff-farms-list" id="activeInvestments">
+      <div class="gff-empty">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <p>No active farms yet. Start planting your fortune!</p>
+        <button onclick="window.location.href='/VIP'">Start Investing</button>
+      </div>
+    </div>
+
+    <!-- Shared Footer Placeholder -->
+    <div id="app-footer"></div>
   </div>
 
   <div id="toast"></div>
@@ -358,46 +556,60 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/supabase.js"></script>
   <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  
   <script>
-    // Toggle Balance Visibility
+    // Toggle balance visibility
     let balanceVisible = true;
     function toggleBalance() {
       balanceVisible = !balanceVisible;
-      const el = document.getElementById('walletBalance');
-      const icon = document.getElementById('eyeIcon');
+      const balanceEl = document.getElementById('walletBalance');
+      const eyeIcon = document.getElementById('eyeIcon');
+      
       if (balanceVisible) {
-        el.textContent = el.dataset.original || '₦0.00';
-        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        balanceEl.textContent = balanceEl.dataset.original || '₦0.00';
+        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
       } else {
-        el.dataset.original = el.textContent;
-        el.textContent = '₦••••••';
-        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+        balanceEl.dataset.original = balanceEl.textContent;
+        balanceEl.textContent = '₦•••••';
+        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
       }
     }
 
-    // Load Data
-    (async function() {
+    // Time-based greeting
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greetingTime');
+    if (greetingEl) {
+      greetingEl.textContent = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    }
+
+    // Load dashboard data
+    document.addEventListener('DOMContentLoaded', async function() {
       const session = await AradelAuth.getSession();
-      if (!session) { window.location.href = '/'; return; }
+      if (!session) {
+        window.location.href = '/';
+        return;
+      }
 
       const uid = session.user.id;
+
+      // Fetch user data
       const { data: profile } = await window.sb.from('users').select('*').eq('id', uid).single();
       const { data: wallet } = await window.sb.from('wallets').select('*').eq('user_id', uid).single();
 
       if (profile) {
+        document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
         document.getElementById('userAvatar').textContent = profile.full_name.charAt(0).toUpperCase();
+        document.getElementById('memberId').textContent = `Member • ${profile.referral_code}`;
       }
 
       if (wallet) {
-        const bal = '₦' + Number(wallet.balance).toLocaleString();
-        document.getElementById('walletBalance').textContent = bal;
-        document.getElementById('walletBalance').dataset.original = bal;
-        document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit || 0).toLocaleString();
-        document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit || 0).toLocaleString();
-        document.getElementById('statReferral').textContent = '₦' + Number(wallet.total_referral_earnings || 0).toLocaleString();
+        const balanceText = '₦' + Number(wallet.balance).toLocaleString();
+        document.getElementById('walletBalance').textContent = balanceText;
+        document.getElementById('walletBalance').dataset.original = balanceText;
       }
 
-      // Fetch Active Investments
+      // Fetch active investments
       const { data: investments } = await window.sb
         .from('user_products')
         .select('*, products(name, duration_days)')
@@ -412,22 +624,22 @@
           const progress = Math.min(100, ((inv.days_collected || 0) / duration) * 100);
           return `
             <div class="gff-farm-card">
-              <div class="gff-farm-head">
-                <div class="gff-farm-name">${inv.products?.name || 'VIP Plan'}</div>
-                <div class="gff-farm-badge">Growing</div>
+              <div class="gff-farm-top">
+                <div class="gff-farm-name">${inv.products?.name || 'Investment'}</div>
+                <div class="gff-farm-status">Growing</div>
               </div>
               <div class="gff-farm-progress">
                 <div class="gff-farm-bar" style="width: ${progress}%"></div>
               </div>
-              <div class="gff-farm-foot">
+              <div class="gff-farm-bottom">
                 <span>${inv.days_collected || 0}/${duration} days</span>
-                <div class="gff-farm-earning">+₦${Number(inv.daily_income).toLocaleString()}/day</div>
+                <strong>+${Number(inv.daily_income).toLocaleString()}/day</strong>
               </div>
             </div>
           `;
         }).join('');
       }
-    })();
+    });
   </script>
 </body>
 </html>
