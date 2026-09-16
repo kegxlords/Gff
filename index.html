@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="logo-wrap">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="logo-text">GREEN FARM <span>FORTUNE</span></div>
+      </div>
+      <p class="auth-subtitle">Grow Today • Harvest Tomorrow • Live Better</p>
+    </div>
+
+    <div class="auth-card">
+      <div id="errorAlert" class="alert alert-error"><span id="errorMessage"></span></div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="••••••••" required />
+        </div>
+        <div class="form-footer">
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+      </form>
+    </div>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="register.html">Sign up</a>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+      
+      try {
+        await AradelAuth.login(email, password);
+        AradelAuth.toast('Login successful!');
+        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+      } catch (err) {
+        const alert = document.getElementById('errorAlert');
+        document.getElementById('errorMessage').textContent = err.message;
+        alert.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
