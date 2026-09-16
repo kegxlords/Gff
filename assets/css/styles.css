@@ -232,3 +232,18 @@ input { font-family: inherit; }
   box-shadow: var(--shadow-lg);
 }
 #toast.show { opacity: 1; }
+
+/* Bottom Navigation (Shared) */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 520px;
+  background: var(--white); border-top: 1px solid var(--border-light);
+  display: flex; justify-content: space-around; padding: 12px 0 24px; z-index: 100;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: color 0.2s;
+}
+.nav-item.active { color: var(--primary-blue); }
+.nav-item.active svg { stroke: var(--primary-blue); }
