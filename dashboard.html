@@ -4,120 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - Green Farm Fortune</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <style>
-    :root {
-      --gff-blue: #0033A0;
-      --gff-blue-dark: #002171;
-      --gff-gold: #FFD700;
-      --gff-gold-dark: #D4AF37;
-      --gff-red: #DC143C;
-      --gff-green: #228B22;
-      --gff-green-light: #32CD32;
-      --bg-cream: #FFFBF0;
-      --card-white: #FFFFFF;
+    /* GFF Dashboard Specific Styles */
+    .gff-dashboard {
+      max-width: 520px;
+      margin: 0 auto;
+      padding-bottom: 90px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(180deg, var(--bg-cream) 0%, #FFF5E0 100%);
-      min-height: 100vh;
-      padding-bottom: 80px;
-    }
-
-    /* ========== TOP NAVIGATION ========== */
-    .top-nav {
-      background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+    /* Header */
+    .gff-header {
+      background: white;
       padding: 16px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 4px 20px rgba(0, 51, 160, 0.3);
+      border-bottom: 1px solid #E5E7EB;
       position: sticky;
       top: 0;
       z-index: 100;
     }
-
-    .logo-section {
+    .gff-header-left {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-
-    .logo-circle {
-      width: 45px;
-      height: 45px;
-      background: linear-gradient(135deg, var(--gff-green), var(--gff-green-light));
+    .gff-avatar {
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
+      background: linear-gradient(135deg, var(--gff-green), var(--gff-green-light));
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 3px solid var(--gff-gold);
-    }
-
-    .logo-circle svg {
-      width: 28px;
-      height: 28px;
-      fill: white;
-    }
-
-    .brand-text h1 {
-      font-family: 'Fraunces', serif;
       font-size: 20px;
-      font-weight: 800;
-      color: white;
-      letter-spacing: -0.5px;
+      border: 2px solid var(--gff-gold);
     }
-
-    .brand-text span {
-      color: var(--gff-gold);
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .user-info {
-      text-align: right;
-      color: white;
-    }
-
-    .user-name {
-      font-weight: 700;
+    .gff-greeting h2 {
       font-size: 14px;
+      color: #6B7280;
+      font-weight: 500;
+      margin: 0;
     }
-
-    .user-vip {
-      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
-      color: var(--gff-blue-dark);
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 11px;
+    .gff-greeting p {
+      font-size: 16px;
       font-weight: 700;
-      display: inline-block;
-      margin-top: 2px;
+      color: var(--gff-blue-dark);
+      margin: 2px 0 0;
     }
-
-    .icon-btn {
-      width: 42px;
-      height: 42px;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
+    .gff-header-right {
+      display: flex;
+      gap: 10px;
+    }
+    .gff-icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #F3F4F6;
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
       cursor: pointer;
       position: relative;
-      backdrop-filter: blur(10px);
     }
-
-    .badge {
+    .gff-icon-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke: #374151;
+      stroke-width: 2;
+      fill: none;
+    }
+    .gff-badge {
       position: absolute;
       top: 6px;
       right: 6px;
@@ -125,319 +85,361 @@
       height: 8px;
       background: var(--gff-red);
       border-radius: 50%;
-      border: 2px solid var(--gff-blue);
+      border: 2px solid white;
     }
 
-    /* ========== WELCOME BANNER ========== */
-    .welcome-banner {
-      background: linear-gradient(135deg, var(--gff-gold) 0%, var(--gff-gold-dark) 100%);
-      margin: 20px;
-      padding: 24px;
-      border-radius: 20px;
-      box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .welcome-banner::before {
-      content: '🌾';
-      position: absolute;
-      right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 80px;
-      opacity: 0.15;
-    }
-
-    .welcome-text h2 {
-      font-family: 'Fraunces', serif;
-      font-size: 24px;
-      color: var(--gff-blue-dark);
-      margin-bottom: 6px;
-    }
-
-    .welcome-text p {
-      color: var(--gff-blue);
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    /* ========== BALANCE CARD ========== */
-    .balance-card {
+    /* Balance Card */
+    .gff-balance-card {
       background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
-      margin: 0 20px 24px;
-      padding: 28px;
+      margin: 20px;
+      padding: 28px 24px;
       border-radius: 24px;
       color: white;
-      box-shadow: 0 12px 40px rgba(0, 51, 160, 0.4);
       position: relative;
       overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 51, 160, 0.3);
     }
-
-    .balance-card::after {
+    .gff-balance-card::before {
       content: '';
       position: absolute;
       top: -50%;
-      right: -20%;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%);
+      right: -30%;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%);
       border-radius: 50%;
     }
-
-    .balance-label {
-      font-size: 13px;
-      opacity: 0.85;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-
-    .balance-amount {
-      font-family: 'Fraunces', serif;
-      font-size: 42px;
-      font-weight: 800;
-      margin-bottom: 20px;
-      text-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .balance-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .action-btn {
-      padding: 14px;
-      border-radius: 14px;
-      font-weight: 700;
+    .gff-balance-label {
       font-size: 14px;
+      opacity: 0.85;
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 8px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .action-btn:active {
-      transform: scale(0.96);
-    }
-
-    .action-btn.primary {
-      background: var(--gff-gold);
-      color: var(--gff-blue-dark);
-    }
-
-    .action-btn.secondary {
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    /* ========== QUICK STATS ========== */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 0 20px 24px;
-    }
-
-    .stat-card {
-      background: var(--card-white);
-      padding: 18px 14px;
-      border-radius: 16px;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      border: 2px solid transparent;
-      transition: all 0.3s;
-    }
-
-    .stat-card:hover {
-      border-color: var(--gff-gold);
-      transform: translateY(-3px);
-    }
-
-    .stat-icon {
-      width: 40px;
-      height: 40px;
-      margin: 0 auto 10px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .stat-icon.deposit { background: #E3F2FD; color: #1976D2; }
-    .stat-icon.profit { background: #E8F5E9; color: #388E3C; }
-    .stat-icon.referral { background: #FFF3E0; color: #F57C00; }
-
-    .stat-value {
-      font-family: 'Fraunces', serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--gff-blue-dark);
-      margin-bottom: 4px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: #666;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* ========== QUICK ACTIONS ========== */
-    .section-title {
-      font-family: 'Fraunces', serif;
-      font-size: 20px;
-      color: var(--gff-blue-dark);
-      padding: 0 20px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 24px;
-      background: linear-gradient(180deg, var(--gff-gold), var(--gff-gold-dark));
-      border-radius: 2px;
-    }
-
-    .actions-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      padding: 0 20px 24px;
-    }
-
-    .action-card {
-      background: var(--card-white);
-      padding: 20px;
-      border-radius: 18px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      cursor: pointer;
-      transition: all 0.3s;
-      border: 2px solid transparent;
-    }
-
-    .action-card:hover {
-      border-color: var(--gff-blue);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0,51,160,0.15);
-    }
-
-    .action-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       margin-bottom: 12px;
-      font-size: 24px;
     }
-
-    .action-card:nth-child(1) .action-icon { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
-    .action-card:nth-child(2) .action-icon { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); }
-    .action-card:nth-child(3) .action-icon { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); }
-    .action-card:nth-child(4) .action-icon { background: linear-gradient(135deg, #FCE4EC, #F8BBD9); }
-
-    .action-title {
-      font-weight: 700;
-      color: var(--gff-blue-dark);
-      margin-bottom: 4px;
-    }
-
-    .action-desc {
-      font-size: 12px;
-      color: #666;
-    }
-
-    /* ========== INVESTMENT PREVIEW ========== */
-    .investment-preview {
-      background: var(--card-white);
-      margin: 0 20px 24px;
-      padding: 20px;
-      border-radius: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    }
-
-    .preview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .preview-title {
-      font-family: 'Fraunces', serif;
-      font-size: 18px;
-      color: var(--gff-blue-dark);
-      font-weight: 700;
-    }
-
-    .view-all {
-      color: var(--gff-blue);
-      font-weight: 700;
-      font-size: 13px;
+    .gff-balance-label button {
+      background: none;
+      border: none;
+      color: white;
       cursor: pointer;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 30px;
-      color: #999;
-    }
-
-    .empty-state svg {
-      width: 60px;
-      height: 60px;
-      margin: 0 auto 12px;
-      opacity: 0.3;
-    }
-
-    /* ========== BOTTOM NAV ========== */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid #E0E0E0;
-      padding: 12px 20px 20px;
+      padding: 0;
       display: flex;
-      justify-content: space-around;
-      z-index: 100;
     }
-
-    .nav-link {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      color: #999;
-      text-decoration: none;
-      font-size: 11px;
-      font-weight: 600;
-      transition: color 0.2s;
-    }
-
-    .nav-link.active {
-      color: var(--gff-blue);
-    }
-
-    .nav-link svg {
-      width: 24px;
-      height: 24px;
+    .gff-balance-label button svg {
+      width: 18px;
+      height: 18px;
       stroke: currentColor;
       stroke-width: 2;
       fill: none;
     }
+    .gff-balance-amount {
+      font-family: 'Fraunces', serif;
+      font-size: 44px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+    .gff-member-id {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .gff-balance-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .gff-action-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.2s;
+      font-family: inherit;
+    }
+    .gff-action-btn:active {
+      transform: scale(0.96);
+    }
+    .gff-action-btn.primary {
+      background: var(--gff-gold);
+      color: var(--gff-blue-dark);
+    }
+    .gff-action-btn.secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
 
+    /* Quick Actions */
+    .gff-quick-actions {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .gff-quick-actions::-webkit-scrollbar {
+      display: none;
+    }
+    .gff-quick-item {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      min-width: 70px;
+    }
+    .gff-quick-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .gff-quick-item:active .gff-quick-icon {
+      transform: scale(0.92);
+    }
+    .gff-quick-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 2;
+      fill: none;
+    }
+    .gff-quick-item:nth-child(1) .gff-quick-icon { background: #E3F2FD; }
+    .gff-quick-item:nth-child(1) .gff-quick-icon svg { stroke: #1976D2; }
+    .gff-quick-item:nth-child(2) .gff-quick-icon { background: #E8F5E9; }
+    .gff-quick-item:nth-child(2) .gff-quick-icon svg { stroke: #388E3C; }
+    .gff-quick-item:nth-child(3) .gff-quick-icon { background: #FFF3E0; }
+    .gff-quick-item:nth-child(3) .gff-quick-icon svg { stroke: #F57C00; }
+    .gff-quick-item:nth-child(4) .gff-quick-icon { background: #FCE4EC; }
+    .gff-quick-item:nth-child(4) .gff-quick-icon svg { stroke: #C2185B; }
+    .gff-quick-item:nth-child(5) .gff-quick-icon { background: #F3E5F5; }
+    .gff-quick-item:nth-child(5) .gff-quick-icon svg { stroke: #7B1FA2; }
+    .gff-quick-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #374151;
+      text-align: center;
+    }
+
+    /* Live Ticker */
+    .gff-ticker {
+      background: linear-gradient(90deg, #F0FDF4 0%, #DCFCE7 100%);
+      margin: 0 20px 24px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #BBF7D0;
+      overflow: hidden;
+    }
+    .gff-ticker-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #166534;
+      font-weight: 600;
+      animation: tickerScroll 20s linear infinite;
+      white-space: nowrap;
+    }
+    .gff-ticker-dot {
+      width: 8px;
+      height: 8px;
+      background: #22C55E;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes tickerScroll {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Section Title */
+    .gff-section-title {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      padding: 0 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .gff-section-title a {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--gff-blue);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    /* Investment Packages Preview */
+    .gff-packages-scroll {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .gff-packages-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .gff-package-card {
+      flex-shrink: 0;
+      width: 160px;
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border: 2px solid transparent;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .gff-package-card:hover {
+      border-color: var(--gff-gold);
+      transform: translateY(-2px);
+    }
+    .gff-package-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .gff-package-earning {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gff-green);
+      margin-bottom: 4px;
+    }
+    .gff-package-earning span {
+      font-size: 12px;
+      color: #6B7280;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+    .gff-package-info {
+      font-size: 11px;
+      color: #6B7280;
+      margin-top: 8px;
+    }
+    .gff-package-info strong {
+      color: var(--gff-blue-dark);
+      font-size: 13px;
+    }
+
+    /* Active Investments */
+    .gff-investments {
+      padding: 0 20px;
+      margin-bottom: 24px;
+    }
+    .gff-investment-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--gff-green);
+    }
+    .gff-investment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .gff-investment-name {
+      font-weight: 700;
+      color: var(--gff-blue-dark);
+      font-size: 15px;
+    }
+    .gff-investment-status {
+      background: #DCFCE7;
+      color: #166534;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .gff-investment-progress {
+      background: #F3F4F6;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .gff-investment-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gff-green), var(--gff-green-light));
+      border-radius: 4px;
+      transition: width 0.5s;
+    }
+    .gff-investment-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #6B7280;
+    }
+    .gff-investment-footer strong {
+      color: var(--gff-green);
+      font-size: 14px;
+    }
+
+    /* Empty State */
+    .gff-empty {
+      text-align: center;
+      padding: 30px 20px;
+      background: white;
+      border-radius: 16px;
+      border: 2px dashed #E5E7EB;
+    }
+    .gff-empty svg {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 12px;
+      stroke: #D1D5DB;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .gff-empty p {
+      color: #6B7280;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .gff-empty button {
+      background: var(--gff-blue);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* Toast */
     #toast {
       position: fixed;
       bottom: 100px;
@@ -454,143 +456,152 @@
       pointer-events: none;
       transition: opacity 0.3s;
     }
-
     #toast.show {
       opacity: 1;
     }
   </style>
 </head>
 <body>
-  <!-- Top Navigation -->
-  <nav class="top-nav">
-    <div class="logo-section">
-      <div class="logo-circle">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  <div class="gff-dashboard">
+    <!-- Header -->
+    <header class="gff-header">
+      <div class="gff-header-left">
+        <div class="gff-avatar"></div>
+        <div class="gff-greeting">
+          <h2 id="greetingTime">Good morning</h2>
+          <p id="userName">Farmer</p>
+        </div>
       </div>
-      <div class="brand-text">
-        <h1>GREEN FARM <span>FORTUNE</span></h1>
+      <div class="gff-header-right">
+        <button class="gff-icon-btn" onclick="window.location.href='/messages'">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="gff-badge" id="msgBadge" style="display:none;"></span>
+        </button>
+        <button class="gff-icon-btn" onclick="window.location.href='/profile'">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
       </div>
-    </div>
-    <div class="nav-actions">
-      <div class="user-info">
-        <div class="user-name" id="userName">User</div>
-        <div class="user-vip" id="userVip">Member</div>
-      </div>
-      <button class="icon-btn" onclick="window.location.href='/messages'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
-        <span class="badge" id="msgBadge" style="display:none;"></span>
-      </button>
-    </div>
-  </nav>
+    </header>
 
-  <!-- Welcome Banner -->
-  <div class="welcome-banner">
-    <div class="welcome-text">
-      <h2>Welcome Back! 🌱</h2>
-      <p>Grow Today • Harvest Tomorrow • Live Better</p>
-    </div>
-  </div>
-
-  <!-- Balance Card -->
-  <div class="balance-card">
-    <div class="balance-label">Total Balance</div>
-    <div class="balance-amount" id="walletBalance">₦0.00</div>
-    <div class="balance-actions">
-      <button class="action-btn primary" onclick="window.location.href='/recharge'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Deposit
-      </button>
-      <button class="action-btn secondary" onclick="window.location.href='/withdraw'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-        Withdraw
-      </button>
-    </div>
-  </div>
-
-  <!-- Quick Stats -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon deposit">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
+    <!-- Balance Card -->
+    <div class="gff-balance-card">
+      <div class="gff-balance-label">
+        Total Balance
+        <button onclick="toggleBalance()" id="eyeBtn">
+          <svg viewBox="0 0 24 24" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
       </div>
-      <div class="stat-value" id="statDeposit">₦0</div>
-      <div class="stat-label">Total Deposit</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon profit">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 17"/>
-        </svg>
-      </div>
-      <div class="stat-value" id="statProfit">₦0</div>
-      <div class="stat-label">Total Profit</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon referral">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-        </svg>
-      </div>
-      <div class="stat-value" id="statReferral">₦0</div>
-      <div class="stat-label">Referrals</div>
-    </div>
-  </div>
-
-  <!-- Quick Actions -->
-  <h3 class="section-title">Quick Actions</h3>
-  <div class="actions-grid">
-    <div class="action-card" onclick="window.location.href='/VIP'">
-      <div class="action-icon">🌾</div>
-      <div class="action-title">Invest Now</div>
-      <div class="action-desc">Choose VIP packages</div>
-    </div>
-    <div class="action-card" onclick="window.location.href='/investment'">
-      <div class="action-icon">📊</div>
-      <div class="action-title">My Investments</div>
-      <div class="action-desc">View active plans</div>
-    </div>
-    <div class="action-card" onclick="window.location.href='/team'">
-      <div class="action-icon">👥</div>
-      <div class="action-title">My Team</div>
-      <div class="action-desc">Earn 22% commission</div>
-    </div>
-    <div class="action-card" onclick="window.location.href='/transaction-history'">
-      <div class="action-icon">📋</div>
-      <div class="action-title">Transactions</div>
-      <div class="action-desc">View history</div>
-    </div>
-  </div>
-
-  <!-- Investment Preview -->
-  <div class="investment-preview">
-    <div class="preview-header">
-      <div class="preview-title">Active Investments</div>
-      <div class="view-all" onclick="window.location.href='/investment'">View All →</div>
-    </div>
-    <div id="activeInvestments">
-      <div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-        </svg>
-        <p>No active investments yet</p>
-        <button class="action-btn primary" style="margin-top:12px;width:100%" onclick="window.location.href='/VIP'">
-          Start Investing
+      <div class="gff-balance-amount" id="walletBalance">₦0.00</div>
+      <div class="gff-member-id" id="memberId">Member • GFF000000</div>
+      <div class="gff-balance-actions">
+        <button class="gff-action-btn primary" onclick="window.location.href='/recharge'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Deposit
+        </button>
+        <button class="gff-action-btn secondary" onclick="window.location.href='/withdraw'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Withdraw
         </button>
       </div>
     </div>
+
+    <!-- Quick Actions -->
+    <div class="gff-quick-actions">
+      <div class="gff-quick-item" onclick="window.location.href='/VIP'">
+        <div class="gff-quick-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <div class="gff-quick-label">Invest</div>
+      </div>
+      <div class="gff-quick-item" onclick="window.location.href='/withdraw'">
+        <div class="gff-quick-icon">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        <div class="gff-quick-label">Withdraw</div>
+      </div>
+      <div class="gff-quick-item" onclick="window.location.href='/gift-code'">
+        <div class="gff-quick-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <div class="gff-quick-label">Gift Code</div>
+      </div>
+      <div class="gff-quick-item" onclick="window.location.href='/transaction-history'">
+        <div class="gff-quick-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="gff-quick-label">History</div>
+      </div>
+      <div class="gff-quick-item" onclick="window.location.href='/team'">
+        <div class="gff-quick-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="gff-quick-label">Team</div>
+      </div>
+    </div>
+
+    <!-- Live Ticker -->
+    <div class="gff-ticker">
+      <div class="gff-ticker-content">
+        <span class="gff-ticker-dot"></span>
+        <span>LIVE: Farmer***2 just withdrew ₦15,000 • User***8 earned ₦3,000 daily income • New member joined from Lagos</span>
+      </div>
+    </div>
+
+    <!-- Investment Packages -->
+    <h3 class="gff-section-title">
+      Investment Packages
+      <a href="/VIP">View All →</a>
+    </h3>
+    <div class="gff-packages-scroll">
+      <div class="gff-package-card" onclick="window.location.href='/VIP'">
+        <div class="gff-package-badge">VIP 1</div>
+        <div class="gff-package-earning">₦900 <span>/day</span></div>
+        <div class="gff-package-info">
+          <strong>₦3,000</strong><br>
+          30 days • 27,000 total
+        </div>
+      </div>
+      <div class="gff-package-card" onclick="window.location.href='/VIP'">
+        <div class="gff-package-badge">VIP 3</div>
+        <div class="gff-package-earning">₦3,000 <span>/day</span></div>
+        <div class="gff-package-info">
+          <strong>₦10,000</strong><br>
+          30 days • 90,000 total
+        </div>
+      </div>
+      <div class="gff-package-card" onclick="window.location.href='/VIP'">
+        <div class="gff-package-badge">VIP 5</div>
+        <div class="gff-package-earning">₦15,150 <span>/day</span></div>
+        <div class="gff-package-info">
+          <strong>₦50,000</strong><br>
+          30 days • ₦454,500 total
+        </div>
+      </div>
+      <div class="gff-package-card" onclick="window.location.href='/VIP'">
+        <div class="gff-package-badge">VIP 7</div>
+        <div class="gff-package-earning">₦39,000 <span>/day</span></div>
+        <div class="gff-package-info">
+          <strong>₦130,000</strong><br>
+          30 days • ₦1.17M total
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Investments -->
+    <h3 class="gff-section-title">
+      My Active Farms
+      <a href="/investment">View All →</a>
+    </h3>
+    <div class="gff-investments" id="activeInvestments">
+      <div class="gff-empty">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <p>No active investments yet</p>
+        <button onclick="window.location.href='/VIP'">Start Investing</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Bottom Navigation -->
+  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <a href="/dashboard" class="nav-link active">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -616,6 +627,31 @@
   <script src="/assets/js/supabase.js"></script>
   <script src="/assets/js/auth.js"></script>
   <script>
+    // Toggle balance visibility
+    let balanceVisible = true;
+    function toggleBalance() {
+      balanceVisible = !balanceVisible;
+      const balanceEl = document.getElementById('walletBalance');
+      const eyeIcon = document.getElementById('eyeIcon');
+      
+      if (balanceVisible) {
+        balanceEl.textContent = balanceEl.dataset.original || '₦0.00';
+        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      } else {
+        balanceEl.dataset.original = balanceEl.textContent;
+        balanceEl.textContent = '₦•••••';
+        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+      }
+    }
+
+    // Time-based greeting
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greetingTime');
+    if (greetingEl) {
+      greetingEl.textContent = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    }
+
+    // Load dashboard data
     (async function() {
       const session = await AradelAuth.getSession();
       if (!session) {
@@ -631,37 +667,44 @@
 
       if (profile) {
         document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
-        document.getElementById('userVip').textContent = profile.vip_level > 0 ? `VIP ${profile.vip_level}` : 'Member';
+        document.getElementById('memberId').textContent = `Member • ${profile.referral_code}`;
       }
 
       if (wallet) {
-        document.getElementById('walletBalance').textContent = '₦' + Number(wallet.balance).toLocaleString();
-        document.getElementById('statDeposit').textContent = '₦' + Number(wallet.total_deposit || 0).toLocaleString();
-        document.getElementById('statProfit').textContent = '₦' + Number(wallet.total_profit || 0).toLocaleString();
-        document.getElementById('statReferral').textContent = '₦' + Number(wallet.total_referral_earnings || 0).toLocaleString();
+        const balanceText = '₦' + Number(wallet.balance).toLocaleString();
+        document.getElementById('walletBalance').textContent = balanceText;
+        document.getElementById('walletBalance').dataset.original = balanceText;
       }
 
       // Fetch active investments
       const { data: investments } = await window.sb
         .from('user_products')
-        .select('*, products(name)')
+        .select('*, products(name, duration_days)')
         .eq('user_id', uid)
         .eq('status', 'active')
         .limit(3);
 
       if (investments && investments.length > 0) {
         const container = document.getElementById('activeInvestments');
-        container.innerHTML = investments.map(inv => `
-          <div style="background:#f5f5f5;padding:14px;border-radius:12px;margin-bottom:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <div style="font-weight:700;color:var(--gff-blue-dark)">${inv.products?.name || 'Investment'}</div>
-                <div style="font-size:12px;color:#666;margin-top:2px">${inv.days_collected || 0}/30 days</div>
+        container.innerHTML = investments.map(inv => {
+          const duration = inv.products?.duration_days || 30;
+          const progress = Math.min(100, ((inv.days_collected || 0) / duration) * 100);
+          return `
+            <div class="gff-investment-card">
+              <div class="gff-investment-header">
+                <div class="gff-investment-name">${inv.products?.name || 'Investment'}</div>
+                <div class="gff-investment-status">Growing</div>
               </div>
-              <div style="font-weight:700;color:var(--gff-green)">+₦${Number(inv.daily_income).toLocaleString()}/day</div>
+              <div class="gff-investment-progress">
+                <div class="gff-investment-progress-bar" style="width: ${progress}%"></div>
+              </div>
+              <div class="gff-investment-footer">
+                <span>${inv.days_collected || 0}/${duration} days</span>
+                <strong>+₦${Number(inv.daily_income).toLocaleString()}/day</strong>
+              </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
 
       // Check unread messages
@@ -673,7 +716,7 @@
 
       if (count > 0) {
         const badge = document.getElementById('msgBadge');
-        badge.style.display = 'block';
+        if (badge) badge.style.display = 'block';
       }
     })();
   </script>
