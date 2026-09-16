@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Green Farm Fortune Investment Platform",
   "scripts": {
-    "build": "echo 'Building...'"
+    "build": "echo 'No build required'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0"
