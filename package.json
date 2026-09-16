@@ -1,0 +1,12 @@
+{
+  "name": "green-farm-fortune",
+  "version": "1.0.0",
+  "description": "Green Farm Fortune Investment Platform",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
