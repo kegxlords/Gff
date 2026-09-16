@@ -247,3 +247,174 @@ input { font-family: inherit; }
 }
 .nav-item.active { color: var(--primary-blue); }
 .nav-item.active svg { stroke: var(--primary-blue); }
+
+/* ============================================================
+   GFF DASHBOARD & SHARED LAYOUT STYLES
+   ============================================================ */
+:root {
+  --gff-blue: #0033A0;
+  --gff-blue-dark: #002171;
+  --gff-gold: #FFD700;
+  --gff-gold-dark: #D4AF37;
+  --gff-red: #DC143C;
+  --gff-green: #228B22;
+  --gff-green-light: #32CD32;
+  --bg-cream: #FFFBF0;
+  --card-white: #FFFFFF;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(180deg, var(--bg-cream) 0%, #FFF5E0 100%);
+  min-height: 100vh;
+  padding-bottom: 90px; /* Space for bottom nav */
+  color: #1A2E1A;
+  margin: 0;
+}
+
+/* --- Top Navigation (Shared Header) --- */
+.top-nav {
+  background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0, 51, 160, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo-section { display: flex; align-items: center; gap: 12px; }
+.logo-circle {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--gff-green), var(--gff-green-light));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--gff-gold);
+}
+.logo-circle svg { width: 24px; height: 24px; fill: white; }
+.brand-text h1 {
+  font-family: 'Fraunces', serif; font-size: 18px; font-weight: 800;
+  color: white; margin: 0; letter-spacing: -0.5px;
+}
+.brand-text span { color: var(--gff-gold); }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.user-info { text-align: right; color: white; }
+.user-name { font-weight: 700; font-size: 14px; }
+.user-vip {
+  background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+  color: var(--gff-blue-dark); padding: 2px 10px; border-radius: 12px;
+  font-size: 10px; font-weight: 700; display: inline-block; margin-top: 2px;
+}
+.icon-btn {
+  width: 40px; height: 40px; background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; cursor: pointer; position: relative;
+}
+.badge {
+  position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+  background: var(--gff-red); border-radius: 50%; border: 2px solid var(--gff-blue);
+}
+
+/* --- Dashboard Specifics --- */
+.page-container { max-width: 520px; margin: 0 auto; }
+
+.welcome-banner {
+  background: linear-gradient(135deg, var(--gff-gold) 0%, var(--gff-gold-dark) 100%);
+  margin: 20px; padding: 24px; border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3); position: relative; overflow: hidden;
+}
+.welcome-banner::before {
+  content: '🌾'; position: absolute; right: 20px; top: 50%;
+  transform: translateY(-50%); font-size: 80px; opacity: 0.15;
+}
+.welcome-text h2 { font-family: 'Fraunces', serif; font-size: 22px; color: var(--gff-blue-dark); margin: 0 0 6px; }
+.welcome-text p { color: var(--gff-blue); font-weight: 600; font-size: 13px; margin: 0; }
+
+.balance-card {
+  background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+  margin: 0 20px 24px; padding: 28px; border-radius: 24px; color: white;
+  box-shadow: 0 12px 40px rgba(0, 51, 160, 0.4); position: relative; overflow: hidden;
+}
+.balance-card::after {
+  content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%); border-radius: 50%;
+}
+.balance-label { font-size: 13px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.balance-amount { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 800; margin-bottom: 20px; }
+.balance-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.action-btn {
+  padding: 14px; border-radius: 14px; font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+  transition: transform 0.2s; border: none; font-family: inherit;
+}
+.action-btn:active { transform: scale(0.96); }
+.action-btn.primary { background: var(--gff-gold); color: var(--gff-blue-dark); }
+.action-btn.secondary { background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); }
+
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 20px 24px; }
+.stat-card {
+  background: var(--card-white); padding: 16px 10px; border-radius: 16px; text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 2px solid transparent; transition: all 0.3s;
+}
+.stat-icon {
+  width: 36px; height: 36px; margin: 0 auto 8px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-icon.deposit { background: #E3F2FD; color: #1976D2; }
+.stat-icon.profit { background: #E8F5E9; color: #388E3C; }
+.stat-icon.referral { background: #FFF3E0; color: #F57C00; }
+.stat-value { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: var(--gff-blue-dark); margin-bottom: 4px; }
+.stat-label { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.section-title {
+  font-family: 'Fraunces', serif; font-size: 18px; color: var(--gff-blue-dark);
+  padding: 0 20px 16px; display: flex; align-items: center; gap: 10px; margin: 0;
+}
+.section-title::before {
+  content: ''; width: 4px; height: 20px;
+  background: linear-gradient(180deg, var(--gff-gold), var(--gff-gold-dark)); border-radius: 2px;
+}
+
+.actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 20px 24px; }
+.action-card {
+  background: var(--card-white); padding: 20px; border-radius: 18px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.3s;
+  border: 2px solid transparent;
+}
+.action-card:hover { border-color: var(--gff-blue); transform: translateY(-2px); }
+.action-icon {
+  width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 12px; font-size: 22px;
+}
+.action-card:nth-child(1) .action-icon { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
+.action-card:nth-child(2) .action-icon { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); }
+.action-card:nth-child(3) .action-icon { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); }
+.action-card:nth-child(4) .action-icon { background: linear-gradient(135deg, #FCE4EC, #F8BBD9); }
+.action-title { font-weight: 700; color: var(--gff-blue-dark); margin-bottom: 4px; font-size: 14px; }
+.action-desc { font-size: 11px; color: #666; }
+
+.investment-preview {
+  background: var(--card-white); margin: 0 20px 24px; padding: 20px;
+  border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.preview-title { font-family: 'Fraunces', serif; font-size: 16px; color: var(--gff-blue-dark); font-weight: 700; }
+.view-all { color: var(--gff-blue); font-weight: 700; font-size: 12px; cursor: pointer; }
+.empty-state { text-align: center; padding: 20px; color: #999; }
+.empty-state svg { width: 50px; height: 50px; margin: 0 auto 12px; opacity: 0.3; }
+
+/* --- Bottom Navigation (Shared Footer) --- */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 1px solid #E0E0E0;
+  padding: 10px 20px 20px; display: flex; justify-content: space-around;
+  z-index: 100; max-width: 520px; margin: 0 auto;
+}
+.nav-link {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: #999; text-decoration: none; font-size: 10px; font-weight: 600;
+  transition: color 0.2s;
+}
+.nav-link.active { color: var(--gff-blue); }
+.nav-link svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2; fill: none; }
