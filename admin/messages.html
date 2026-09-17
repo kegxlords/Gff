@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Messages - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip on" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Send Message</h2>
+    <select class="adm-input" id="audience">
+      <option value="">📢 Broadcast to ALL users</option>
+    </select>
+    <input class="adm-input" id="mTitle" placeholder="Message title" />
+    <textarea class="adm-input" id="mContent" placeholder="Message content..."></textarea>
+    <button class="adm-go" id="sendBtn" onclick="send()">Send Message</button>
+
+    <h2 class="adm-title" style="font-size:16px;margin-top:20px;">Sent Messages</h2>
+    <div id="list"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null;
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function send() {
+      const btn = document.getElementById('sendBtn');
+      const recipient_id = document.getElementById('audience').value || null;
+      const title = document.getElementById('mTitle').value.trim();
+      const content = document.getElementById('mContent').value.trim();
+      if (!title || !content) return AradelAuth.toast('Title and content required', 'error');
+
+      btn.disabled = true; btn.textContent = 'Sending...';
+      const res = await fetch('/api/admin/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+        body: JSON.stringify({ recipient_id, title, content })
+      });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? 'Message sent!' : d.error, d.ok ? 'success' : 'error');
+      if (d.ok) {
+        document.getElementById('mTitle').value = '';
+        document.getElementById('mContent').value = '';
+        load();
+      }
+      btn.disabled = false; btn.textContent = 'Send Message';
+    }
+
+    async function load() {
+      const { data: users } = await window.sb.from('users').select('id, full_name').order('full_name').limit(300);
+      const sel = document.getElementById('audience');
+      sel.innerHTML = '<option value="">📢 Broadcast to ALL users</option>' +
+        (users || []).map(u => `<option value="${u.id}">👤 ${u.full_name}</option>`).join('');
+
+      const { data: msgs } = await window.sb.from('messages')
+        .select('*').order('created_at', { ascending: false }).limit(30);
+      document.getElementById('list').innerHTML = (msgs && msgs.length) ? msgs.map(m => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${m.title}</div>
+              <div class="adm-sub">${m.is_broadcast ? '📢 Broadcast' : '👤 Direct'} • ${new Date(m.created_at).toLocaleString()}</div>
+            </div>
+            <span class="adm-st active">${m.is_read ? 'READ' : 'UNREAD'}</span>
+          </div>
+          <div class="adm-sub" style="margin-top:8px;">${m.content}</div>
+        </div>`).join('') : '<div class="adm-empty">No messages sent yet.</div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      load();
+    });
+  </script>
+</body>
+</html>
