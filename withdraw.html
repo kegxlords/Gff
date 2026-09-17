@@ -33,7 +33,6 @@
     .wd-go { width:100%; padding:15px; border:none; border-radius:16px; background:linear-gradient(135deg,var(--gff-red),#B01030); color:#fff; font-weight:800; font-family:inherit; font-size:15px; cursor:pointer; box-shadow:0 10px 24px rgba(220,20,60,.28); }
     .wd-go:disabled { opacity:.5; cursor:not-allowed; }
     .wd-note { font-size:11px; color:var(--pf-mut); text-align:center; margin-top:12px; line-height:1.6; }
-    /* Sheet */
     .sheet-overlay { position:fixed; inset:0; background:rgba(14,27,51,.45); backdrop-filter:blur(4px); z-index:900; opacity:0; pointer-events:none; transition:opacity .3s; }
     .sheet-overlay.show { opacity:1; pointer-events:auto; }
     .sheet { position:absolute; bottom:0; left:50%; transform:translate(-50%,100%); width:100%; max-width:520px; background:#fff; border-radius:28px 28px 0 0; padding:14px 22px calc(28px + env(safe-area-inset-bottom)); transition:transform .35s cubic-bezier(.22,1,.36,1); }
@@ -57,7 +56,7 @@
   <div class="wd-wrap">
     <div class="bal-strip rise d1">
       <div><span>Available Balance</span><strong id="wdBalance">0 CFA</strong></div>
-      <div class="fee-note">15% charge<br>applies per withdrawal</div>
+      <div class="fee-note" id="feeNote">15% charge<br>applies per withdrawal</div>
     </div>
 
     <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending approval. Please wait before requesting another.</div>
@@ -69,14 +68,14 @@
     <select class="bank-pick rise d3" id="bankPick"></select>
 
     <button class="wd-go rise d3" id="wdGo" disabled onclick="openSheet()">Withdraw</button>
-    <div class="wd-note rise d3">Withdrawals are processed manually by admin within 24 hours.<br>Net amount = Amount − 15% charge.</div>
+    <div class="wd-note rise d3">Withdrawals are processed manually by admin within 24 hours.<br>Net amount = Amount − fee charge.</div>
   </div>
 
   <div class="sheet-overlay" id="sheetOverlay">
     <div class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-row"><span>Withdrawal Amount</span><strong id="sAmt">—</strong></div>
-      <div class="sheet-row"><span>15% Charge</span><strong class="red" id="sFee">—</strong></div>
+      <div class="sheet-row"><span id="sFeeLbl">15% Charge</span><strong class="red" id="sFee">—</strong></div>
       <div class="sheet-row"><span>You Receive</span><strong class="green" id="sNet">—</strong></div>
       <div class="sheet-row"><span>Payout To</span><strong id="sBank">—</strong></div>
       <div class="sheet-actions">
@@ -95,13 +94,13 @@
   <script src="/assets/js/components.js"></script>
   <script>
     const FIXED = [1000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
-    let UID = null, BALANCE = 0, BANKS = [], SELECTED_AMT = null;
+    let UID = null, BALANCE = 0, BANKS = [], SELECTED_AMT = null, FEE_PCT = 15;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
 
     function renderGrid() {
       document.getElementById('wdGrid').innerHTML = FIXED.map(a => {
         const off = BALANCE < a;
-        const net = Math.round(a * 0.85);
+        const net = Math.round(a * (100 - FEE_PCT) / 100);
         return `
           <div class="wd-amt ${off ? 'off' : ''} ${SELECTED_AMT === a ? 'sel' : ''}" onclick="${off ? '' : 'selectAmt(' + a + ')'}">
             <div class="wd-val">${fmt(a)}</div>
@@ -121,7 +120,7 @@
     function openSheet() {
       if (!SELECTED_AMT || !BANKS.length) return;
       const bank = BANKS.find(b => b.id === document.getElementById('bankPick').value) || BANKS[0];
-      const fee = Math.round(SELECTED_AMT * 0.15);
+      const fee = Math.round(SELECTED_AMT * FEE_PCT / 100);
       document.getElementById('sAmt').textContent = fmt(SELECTED_AMT);
       document.getElementById('sFee').textContent = '− ' + fmt(fee);
       document.getElementById('sNet').textContent = fmt(SELECTED_AMT - fee);
@@ -159,6 +158,14 @@
       if (!session) { window.location.href = '/'; return; }
       UID = session.user.id;
 
+      // Load dynamic fee from platform settings
+      const { data: st } = await window.sb.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
+      if (st) {
+        FEE_PCT = Number(st.withdrawal_fee_percent ?? 15);
+        document.getElementById('feeNote').innerHTML = FEE_PCT + '% charge<br>applies per withdrawal';
+        document.getElementById('sFeeLbl').textContent = FEE_PCT + '% Charge';
+      }
+
       const { data: wallet } = await window.sb.from('wallets').select('balance').eq('user_id', UID).single();
       BALANCE = wallet ? Number(wallet.balance) : 0;
       document.getElementById('wdBalance').textContent = fmt(BALANCE);
@@ -168,7 +175,6 @@
       const pick = document.getElementById('bankPick');
       if (!BANKS.length) {
         pick.innerHTML = '<option value="">No bank account — add one first</option>';
-        pick.onchange = null;
         setTimeout(() => { if (confirm('You need a bank account to withdraw. Add one now?')) window.location.href = '/bank'; }, 600);
       } else {
         pick.innerHTML = BANKS.map(b => `<option value="${b.id}">${b.bank_name} — ${b.account_name} (•••• ${b.account_number.slice(-4)})</option>`).join('');
