@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Users - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip on" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Users</h2>
+    <input class="adm-input" id="search" placeholder="Search name, email or code..." oninput="render()" />
+    <div id="list"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null, USERS = [];
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    function render() {
+      const q = (document.getElementById('search').value || '').toLowerCase();
+      const items = USERS.filter(u =>
+        !q || (u.full_name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.referral_code || '').toLowerCase().includes(q));
+
+      document.getElementById('list').innerHTML = items.length ? items.map(u => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${u.full_name} ${u.is_admin ? '👑' : ''}</div>
+              <div class="adm-sub">${u.email}<br>Code: ${u.referral_code} • VIP ${u.vip_level || 0}<br>Joined ${new Date(u.created_at).toLocaleDateString()}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt">${fmt(u.wallet?.balance || 0)}</div>
+              <div class="adm-sub">Dep: ${fmt(u.wallet?.total_deposit || 0)}</div>
+            </div>
+          </div>
+          <div class="adm-actions">
+            <button class="adm-btn plain" onclick="adjust('${u.id}')">± Balance</button>
+            <button class="adm-btn plain" onclick="toggleAdmin('${u.id}', ${!!u.is_admin})">${u.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
+          </div>
+        </div>`).join('') : '<div class="adm-empty">No users found.</div>';
+    }
+
+    async function adjust(uid) {
+      const u = USERS.find(x => x.id === uid);
+      const v = prompt('Adjust balance (e.g. +5000 or -2000):');
+      if (!v) return;
+      const delta = Number(v.replace('+', ''));
+      if (!delta || isNaN(delta)) return AradelAuth.toast('Invalid amount', 'error');
+      const newBal = Number(u.wallet?.balance || 0) + delta;
+      if (newBal < 0) return AradelAuth.toast('Balance cannot go negative', 'error');
+
+      await window.sb.from('wallets').update({ balance: newBal, updated_at: new Date().toISOString() }).eq('user_id', uid);
+      await window.sb.from('wallet_transactions').insert({
+        user_id: uid, type: 'admin_adjust', amount: delta,
+        description: 'Admin balance adjustment', balance_after: newBal
+      });
+      AradelAuth.toast('Balance updated');
+      load();
+    }
+
+    async function toggleAdmin(uid, current) {
+      if (!confirm(current ? 'Remove admin rights?' : 'Grant admin rights?')) return;
+      await window.sb.from('users').update({ is_admin: !current }).eq('id', uid);
+      AradelAuth.toast('Admin status updated');
+      load();
+    }
+
+    async function load() {
+      const { data: users } = await window.sb.from('users').select('*').order('created_at', { ascending: false });
+      const { data: wallets } = await window.sb.from('wallets').select('*');
+      const wm = {}; (wallets || []).forEach(w => wm[w.user_id] = w);
+      USERS = (users || []).map(u => ({ ...u, wallet: wm[u.id] }));
+      render();
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      load();
+    });
+  </script>
+</body>
+</html>
