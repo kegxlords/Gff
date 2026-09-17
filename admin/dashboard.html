@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Overview - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip on" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Admin Overview</h2>
+
+    <div class="adm-stats">
+      <div class="adm-stat"><b id="sUsers">0</b><span>Users</span></div>
+      <div class="adm-stat"><b id="sDeposits">0</b><span>Deposited</span></div>
+      <div class="adm-stat"><b id="sWithdrawn">0</b><span>Withdrawn</span></div>
+      <div class="adm-stat"><b id="sActive">0</b><span>Active Plans</span></div>
+      <div class="adm-stat"><b id="sPendDep">0</b><span>Pending Dep.</span></div>
+      <div class="adm-stat"><b id="sPendWd">0</b><span>Pending Wd.</span></div>
+    </div>
+
+    <button class="adm-go" onclick="runIncome()">🌙 Run Daily Income Now</button>
+
+    <h2 class="adm-title" style="font-size:16px;margin-top:20px;">Latest Requests</h2>
+    <div id="recent"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null;
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function runIncome() {
+      if (!confirm('Credit daily income to all active plans now?')) return;
+      const res = await fetch('/api/admin/daily-income', {
+        headers: { 'Authorization': 'Bearer ' + SESSION.access_token }
+      });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? `Credited ${d.credited} plans, ${d.completed} completed` : d.error, d.ok ? 'success' : 'error');
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+
+      const { data: users } = await window.sb.from('users').select('id');
+      const { data: wallets } = await window.sb.from('wallets').select('total_deposit');
+      const { data: wds } = await window.sb.from('withdrawal_requests').select('amount').eq('status', 'approved');
+      const { data: active } = await window.sb.from('user_products').select('id', { count: 'exact', head: true }).eq('status', 'active');
+      const { count: pendDep } = await window.sb.from('deposit_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+      const { count: pendWd } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+
+      document.getElementById('sUsers').textContent = users?.length || 0;
+      document.getElementById('sDeposits').textContent = (wallets || []).reduce((s, w) => s + Number(w.total_deposit || 0), 0).toLocaleString();
+      document.getElementById('sWithdrawn').textContent = (wds || []).reduce((s, w) => s + Number(w.amount || 0), 0).toLocaleString();
+      document.getElementById('sActive').textContent = active || 0;
+      document.getElementById('sPendDep').textContent = pendDep || 0;
+      document.getElementById('sPendWd').textContent = pendWd || 0;
+
+      const { data: deps } = await window.sb.from('deposit_requests').select('*, users(full_name)').order('created_at', { ascending: false }).limit(5);
+      const { data: wdl } = await window.sb.from('withdrawal_requests').select('*, users(full_name)').order('created_at', { ascending: false }).limit(5);
+
+      const merged = [
+        ...(deps || []).map(d => ({ t: 'deposit', ...d })),
+        ...(wdl || []).map(w => ({ t: 'withdrawal', ...w }))
+      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8);
+
+      document.getElementById('recent').innerHTML = merged.length ? merged.map(r => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${r.users?.full_name || 'User'} — ${r.t === 'deposit' ? 'Deposit' : 'Withdrawal'}</div>
+              <div class="adm-sub">${new Date(r.created_at).toLocaleString()}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt ${r.t === 'deposit' ? 'green' : 'red'}">${fmt(r.amount)}</div>
+              <span class="adm-st ${r.status}">${r.status.toUpperCase()}</span>
+            </div>
+          </div>
+        </div>`).join('') : '<div class="adm-empty">No requests yet.</div>';
+    });
+  </script>
+</body>
+</html>
