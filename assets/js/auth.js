@@ -1,24 +1,54 @@
 /* ============================================================
    GREEN FARM FORTUNE — FRONTEND AUTH & UTILITY HELPERS
    File: assets/js/auth.js
-   Requires: window.sb (from assets/js/supabase.js)
    ============================================================ */
 (function () {
   const AradelAuth = {
+    _ensured: false,
 
-    /* ---------- SESSION ---------- */
+    /* ---------- SESSION (with auto-repair) ---------- */
     async getSession() {
       try {
         const { data, error } = await window.sb.auth.getSession();
         if (error) { console.error('[GFF] Session error:', error); return null; }
-        return data.session || null;
+        const session = data.session || null;
+        if (session) await this.ensureProfile(session);
+        return session;
       } catch (e) {
         console.error('[GFF] Session exception:', e);
         return null;
       }
     },
 
-    // Guard for protected pages — redirects to login if no session
+    // Creates profile + wallet if they're missing (fixes old broken accounts)
+    async ensureProfile(session) {
+      if (this._ensured) return;
+      this._ensured = true;
+      try {
+        const { data } = await window.sb
+          .from('users').select('id').eq('id', session.user.id).single();
+        if (data) return; // profile exists — nothing to do
+
+        console.warn('[GFF] Profile missing — auto-creating...');
+        const code = 'GFF' + Math.random().toString(36).slice(2, 8).toUpperCase();
+        const meta = session.user.user_metadata || {};
+
+        const { error } = await window.sb.from('users').insert({
+          id: session.user.id,
+          email: session.user.email,
+          full_name: meta.full_name || 'Farmer',
+          phone: meta.phone || null,
+          referral_code: code
+        });
+        if (error) throw error;
+
+        await window.sb.from('wallets').insert({ user_id: session.user.id });
+        console.warn('[GFF] Profile + wallet auto-created:', code);
+      } catch (e) {
+        console.warn('[GFF] ensureProfile:', e.message);
+      }
+    },
+
     async requireAuth() {
       const session = await this.getSession();
       if (!session) {
@@ -28,22 +58,18 @@
       return session;
     },
 
-    // Listen for login/logout events (optional use)
     onAuthChange(cb) {
       return window.sb.auth.onAuthStateChange((event, session) => cb(event, session)).data.subscription;
     },
 
-    /* ---------- LOGIN ----------
-       Done browser-side so the session persists in localStorage */
+    /* ---------- LOGIN (browser-side so session persists) ---------- */
     async login(email, password) {
       const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
       return data;
     },
 
-    /* ---------- REGISTER ----------
-       Server creates the auth user; the DB trigger auto-creates
-       the profile (with referral code), wallet & referral link */
+    /* ---------- REGISTER (server + DB trigger) ---------- */
     async register(full_name, email, phone, password, referral_code) {
       const res = await fetch('/api/auth', {
         method: 'POST',
@@ -64,6 +90,7 @@
 
     /* ---------- LOGOUT ---------- */
     async logout(redirect = '/') {
+      this._ensured = false;
       await window.sb.auth.signOut();
       window.location.href = redirect;
     },
@@ -94,7 +121,6 @@
       return d.toLocaleDateString();
     },
 
-    /* ---------- CLIPBOARD ---------- */
     async copy(text, msg = 'Copied') {
       try {
         await navigator.clipboard.writeText(text);
@@ -104,7 +130,7 @@
       }
     },
 
-    /* ---------- TOAST NOTIFICATIONS ---------- */
+    /* ---------- TOAST ---------- */
     toast(message, type = 'success') {
       let toast = document.getElementById('toast');
       if (!toast) {
