@@ -88,7 +88,14 @@
       border-radius: 14px; font-weight: 800; font-family: inherit; cursor: pointer;
       box-shadow: 0 8px 20px rgba(255, 215, 0, 0.35);
     }
-
+      .inv-add {
+      width: 100%; margin-top: 12px; padding: 11px; border-radius: 12px;
+      border: 1px dashed rgba(0, 51, 160, 0.25); background: rgba(0, 51, 160, 0.04);
+      color: var(--gff-blue); font-weight: 700; font-size: 12.5px;
+      font-family: inherit; cursor: pointer; transition: transform .18s;
+    }
+    .inv-add:active { transform: scale(0.97); }
+    
     #toast {
       position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
       background: var(--gff-blue-dark); color: #fff; padding: 12px 24px;
@@ -135,7 +142,7 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
-    let PLANS = [], TAB = 'active';
+    let PLANS = [], TAB = 'active', ACTIVE_COUNT = {};
     const fmt = n => Number(n).toLocaleString() + ' CFA';
 
     function render() {
@@ -151,7 +158,12 @@
         return;
       }
 
+      const seen = {};
       list.innerHTML = items.map(p => {
+        seen[p.product_id] = (seen[p.product_id] || 0) + 1;
+        const planNo = seen[p.product_id];
+        const quota = ACTIVE_COUNT[p.product_id] || 0;
+
         const duration = p.products?.duration_days || 30;
         const days = p.days_collected || 0;
         const pct = Math.min(100, Math.round((days / duration) * 100));
@@ -163,7 +175,7 @@
           <div class="inv-card">
             <div class="inv-head">
               <div>
-                <div class="inv-name">${p.products?.name || 'VIP Plan'}</div>
+                <div class="inv-name">${p.products?.name || 'VIP Plan'}${planNo > 1 ? ' • #' + planNo : ''}</div>
                 <div class="inv-sector">${p.products?.sector || ''}</div>
               </div>
               <span class="inv-status ${p.status === 'active' ? 'growing' : 'done'}">${p.status === 'active' ? 'GROWING' : 'HARVESTED'}</span>
@@ -180,7 +192,11 @@
                 <div class="inv-foot-val blue">${fmt(earned)}</div>
               </div>
             </div>
-            <div class="inv-days" style="margin:10px 0 0;"><span>Started ${start}</span><span>Ends ${end}</span></div>
+            <div class="inv-days" style="margin:10px 0 0;">
+              <span>Started ${start}</span>
+              <span>${p.status === 'active' ? 'Quota ' + quota + '/3 • Ends ' + end : 'Ended ' + end}</span>
+            </div>
+            ${p.status === 'active' && quota < 3 ? `<button class="inv-add" onclick="window.location.href='/VIP'">+ Add Another ${p.products?.name || ''} Plan</button>` : ''}
           </div>`;
       }).join('');
     }
@@ -206,6 +222,12 @@
         .order('start_date', { ascending: false });
 
       PLANS = plans || [];
+
+      // Count active plans per package (for quota display)
+      ACTIVE_COUNT = {};
+      PLANS.filter(p => p.status === 'active').forEach(p => {
+        ACTIVE_COUNT[p.product_id] = (ACTIVE_COUNT[p.product_id] || 0) + 1;
+      });
 
       const active = PLANS.filter(p => p.status === 'active');
       const dailyTotal = active.reduce((s, p) => s + Number(p.daily_income), 0);
