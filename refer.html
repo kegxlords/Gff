@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Refer & Earn - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .rf-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;} .d3{animation-delay:.19s;}
+    .rf-hero { background: linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); border-radius:24px; padding:26px 22px; color:#fff; text-align:center; position:relative; overflow:hidden; margin-bottom:16px; box-shadow:0 12px 34px rgba(0,51,160,.28); }
+    .rf-hero::after { content:''; position:absolute; top:-50px; right:-40px; width:170px; height:170px; background:radial-gradient(circle,rgba(255,215,0,.25),transparent 70%); border-radius:50%; }
+    .rf-pct { font-family:'Fraunces',serif; font-size:44px; font-weight:800; color:var(--gff-gold); line-height:1; position:relative; z-index:1; }
+    .rf-hero h2 { font-size:18px; font-weight:800; margin:8px 0 4px; position:relative; z-index:1; }
+    .rf-hero p { font-size:12.5px; opacity:.85; margin:0; position:relative; z-index:1; }
+    .rf-codebox { margin-top:18px; background:rgba(255,255,255,.12); border:1px dashed rgba(255,215,0,.5); border-radius:16px; padding:14px; position:relative; z-index:1; }
+    .rf-codebox label { font-size:10px; letter-spacing:1.2px; text-transform:uppercase; opacity:.75; font-weight:700; }
+    .rf-code-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:6px; }
+    .rf-code { font-size:20px; font-weight:800; letter-spacing:2px; color:var(--gff-gold); }
+    .rf-copy { background:var(--gff-gold); color:var(--gff-blue-dark); border:none; padding:8px 16px; border-radius:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit; }
+    .rf-share { display:flex; gap:10px; margin-bottom:18px; }
+    .rf-share button { flex:1; padding:13px; border-radius:14px; border:none; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .rf-share .wa { background:#25D366; color:#fff; }
+    .rf-share .tg { background:#229ED9; color:#fff; }
+    .rf-share .lk { background:var(--pf-card); color:var(--gff-blue); border:1px solid var(--pf-line); }
+    .rf-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:18px; }
+    .rf-stat { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:16px; padding:14px 8px; text-align:center; backdrop-filter:blur(10px); }
+    .rf-stat b { display:block; font-family:'Fraunces',serif; font-size:16px; font-weight:800; }
+    .rf-stat:nth-child(1) b { color:var(--gff-gold-dark); }
+    .rf-stat:nth-child(2) b { color:var(--gff-blue); }
+    .rf-stat:nth-child(3) b { color:var(--gff-green); }
+    .rf-stat span { font-size:9.5px; color:var(--pf-mut); font-weight:700; text-transform:uppercase; letter-spacing:.6px; }
+    .rf-steps { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; backdrop-filter:blur(10px); }
+    .rf-steps h3 { font-size:15px; font-weight:800; margin:0 0 14px; }
+    .rf-step { display:flex; gap:12px; margin-bottom:14px; }
+    .rf-step:last-child { margin-bottom:0; }
+    .rf-num { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--gff-gold),var(--gff-gold-dark)); color:var(--gff-blue-dark); font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .rf-step b { display:block; font-size:13.5px; margin-bottom:2px; }
+    .rf-step p { font-size:12px; color:var(--pf-mut); margin:0; line-height:1.5; }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="rf-wrap">
+    <div class="rf-hero rise d1">
+      <div class="rf-pct">22%</div>
+      <h2>Refer & Earn Commission</h2>
+      <p>Earn 22% of every deposit your referrals make</p>
+      <div class="rf-codebox">
+        <label>Your Referral Code</label>
+        <div class="rf-code-row">
+          <span class="rf-code" id="rfCode">GFF000000</span>
+          <button class="rf-copy" onclick="copyCode()">COPY</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rf-share rise d2">
+      <button class="wa" onclick="shareWA()">WhatsApp</button>
+      <button class="tg" onclick="shareTG()">Telegram</button>
+      <button class="lk" onclick="copyLink()">Copy Link</button>
+    </div>
+
+    <div class="rf-stats rise d2">
+      <div class="rf-stat"><b id="stEarn">0 CFA</b><span>Commission</span></div>
+      <div class="rf-stat"><b id="stRefs">0</b><span>Referrals</span></div>
+      <div class="rf-stat"><b id="stActive">0</b><span>Active</span></div>
+    </div>
+
+    <div class="rf-steps rise d3">
+      <h3>How It Works</h3>
+      <div class="rf-step"><div class="rf-num">1</div><div><b>Share your code</b><p>Friends register with your referral code or link.</p></div></div>
+      <div class="rf-step"><div class="rf-num">2</div><div><b>They deposit</b><p>When your referral's deposit is approved by admin.</p></div></div>
+      <div class="rf-step"><div class="rf-num">3</div><div><b>You earn 22%</b><p>Commission is credited to your wallet instantly — on every deposit they make.</p></div></div>
+    </div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let CODE = '', LINK = '';
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    function shareMsg() {
+      return '🌾 Join me on GREEN FARM FORTUNE — the smart agriculture investment platform!\n\n💰 Earn daily income for 30 days\n🎁 Use my referral code: ' + CODE + '\n\n👉 Sign up: ' + LINK;
+    }
+    function copyCode() { navigator.clipboard.writeText(CODE).then(() => AradelAuth.toast('Code copied')); }
+    function copyLink() { navigator.clipboard.writeText(LINK).then(() => AradelAuth.toast('Link copied')); }
+    function shareWA() { window.open('https://wa.me/?text=' + encodeURIComponent(shareMsg()), '_blank'); }
+    function shareTG() { window.open('https://t.me/share/url?url=' + encodeURIComponent(LINK) + '&text=' + encodeURIComponent(shareMsg()), '_blank'); }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+
+      const { data: profile } = await window.sb.from('users').select('referral_code').eq('id', session.user.id).single();
+      CODE = profile?.referral_code || '';
+      LINK = location.origin + '/register?ref=' + CODE;
+      document.getElementById('rfCode').textContent = CODE;
+
+      const res = await fetch('/api/team/commission', {
+        headers: { 'Authorization': 'Bearer ' + session.access_token }
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('stEarn').textContent = fmt(data.stats.total_commission);
+        document.getElementById('stRefs').textContent = data.stats.total_referrals;
+        document.getElementById('stActive').textContent = data.stats.active_referrals;
+      }
+    });
+  </script>
+</body>
+</html>
