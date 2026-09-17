@@ -19,27 +19,27 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid amount. Choose a fixed withdrawal amount.' });
     }
 
-    // Verify bank card belongs to user
+    // Dynamic withdrawal fee from platform settings
+    const { data: settings } = await supabase.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
+    const feePct = Number(settings?.withdrawal_fee_percent ?? 15);
+
     const { data: card } = await supabase.from('bank_cards').select('*').eq('id', bank_card_id).eq('user_id', user_id).single();
     if (!card) return res.status(400).json({ error: 'Add a bank account first' });
 
-    // Block if a withdrawal is already pending
     const { count } = await supabase.from('withdrawal_requests')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user_id).eq('status', 'pending');
     if (count > 0) return res.status(400).json({ error: 'You already have a pending withdrawal' });
 
-    // Check balance
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user_id).single();
     if (!wallet || Number(wallet.balance) < amt) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
-    const fee = Math.round(amt * 0.15);
+    const fee = Math.round(amt * feePct / 100);
     const net = amt - fee;
     const newBalance = Number(wallet.balance) - amt;
 
-    // Deduct immediately (refunded if rejected)
     await supabase.from('wallets').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', user_id);
 
     await supabase.from('withdrawal_requests').insert({
@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
 
     await supabase.from('wallet_transactions').insert({
       user_id, type: 'withdrawal', amount: -amt,
-      description: 'Withdrawal request (' + net.toLocaleString() + ' CFA net after 15% fee)',
+      description: 'Withdrawal request (' + net.toLocaleString() + ' CFA net after ' + feePct + '% fee)',
       balance_after: newBalance
     });
 
