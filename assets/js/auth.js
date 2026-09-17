@@ -1,98 +1,125 @@
-const AradelAuth = {
-  async getSession() {
-    try {
-      const { data: { session }, error } = await window.sb.auth.getSession();
-      if (error) {
-        console.error('Get session error:', error);
+/* ============================================================
+   GREEN FARM FORTUNE — FRONTEND AUTH & UTILITY HELPERS
+   File: assets/js/auth.js
+   Requires: window.sb (from assets/js/supabase.js)
+   ============================================================ */
+(function () {
+  const AradelAuth = {
+
+    /* ---------- SESSION ---------- */
+    async getSession() {
+      try {
+        const { data, error } = await window.sb.auth.getSession();
+        if (error) { console.error('[GFF] Session error:', error); return null; }
+        return data.session || null;
+      } catch (e) {
+        console.error('[GFF] Session exception:', e);
+        return null;
+      }
+    },
+
+    // Guard for protected pages — redirects to login if no session
+    async requireAuth() {
+      const session = await this.getSession();
+      if (!session) {
+        window.location.href = '/';
         return null;
       }
       return session;
-    } catch (error) {
-      console.error('Session check error:', error);
-      return null;
-    }
-  },
+    },
 
-  async requireAuth() {
-    const session = await this.getSession();
-    if (!session) {
-      console.log('No session found, redirecting to login');
-      window.location.href = '/';
-      return null;
-    }
-    return session;
-  },
+    // Listen for login/logout events (optional use)
+    onAuthChange(cb) {
+      return window.sb.auth.onAuthStateChange((event, session) => cb(event, session)).data.subscription;
+    },
 
-  async login(email, password) {
-    try {
-      const { data, error } = await window.sb.auth.signInWithPassword({
-        email,
-        password
+    /* ---------- LOGIN ----------
+       Done browser-side so the session persists in localStorage */
+    async login(email, password) {
+      const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
+    /* ---------- REGISTER ----------
+       Server creates the auth user; the DB trigger auto-creates
+       the profile (with referral code), wallet & referral link */
+    async register(full_name, email, phone, password, referral_code) {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ action: 'register', full_name, email, phone, password, referral_code })
       });
-      
-      if (error) throw error;
-      
-      // Fetch user profile
-      const { data: profile } = await window.sb
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-      
-      return { ok: true, user: data.user, profile, session: data.session };
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  },
 
-  async register(full_name, email, phone, password, referral_code) {
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ 
-        action: 'register', 
-        full_name, 
-        email, 
-        phone, 
-        password, 
-        referral_code 
-      })
-    });
-    
-    const contentType = res.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await res.text();
-      console.error('API returned non-JSON:', text);
-      throw new Error('Server error - please try again later');
-    }
-    
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || 'Registration failed');
-    }
-    return data;
-  },
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        console.error('[GFF] Register returned non-JSON:', await res.text());
+        throw new Error('Server error — please try again');
+      }
 
-  async logout() {
-    await window.sb.auth.signOut();
-    window.location.href = '/';
-  },
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Registration failed');
+      return data;
+    },
 
-  toast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    if (!toast) {
-      alert(message);
-      return;
+    /* ---------- LOGOUT ---------- */
+    async logout(redirect = '/') {
+      await window.sb.auth.signOut();
+      window.location.href = redirect;
+    },
+
+    /* ---------- QUICK DATA FETCHERS ---------- */
+    async getProfile(uid) {
+      const { data } = await window.sb.from('users').select('*').eq('id', uid).single();
+      return data;
+    },
+
+    async getWallet(uid) {
+      const { data } = await window.sb.from('wallets').select('*').eq('user_id', uid).single();
+      return data;
+    },
+
+    /* ---------- FORMATTING ---------- */
+    money(n) {
+      return Number(n || 0).toLocaleString() + ' CFA';
+    },
+
+    timeAgo(dateStr) {
+      const d = new Date(dateStr);
+      const s = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (s < 60) return 'Just now';
+      const m = Math.floor(s / 60);  if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);  if (h < 24) return h + 'h ago';
+      const dy = Math.floor(h / 24); if (dy < 30) return dy + 'd ago';
+      return d.toLocaleDateString();
+    },
+
+    /* ---------- CLIPBOARD ---------- */
+    async copy(text, msg = 'Copied') {
+      try {
+        await navigator.clipboard.writeText(text);
+        this.toast(msg);
+      } catch (e) {
+        this.toast(text);
+      }
+    },
+
+    /* ---------- TOAST NOTIFICATIONS ---------- */
+    toast(message, type = 'success') {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed;bottom:110px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:25px;font-size:13px;font-weight:700;z-index:1000;opacity:0;pointer-events:none;transition:opacity .3s;color:#fff;font-family:Inter,sans-serif;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.style.background = type === 'error' ? '#DC143C' : '#002171';
+      toast.classList.add('show');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
     }
-    toast.textContent = message;
-    toast.style.background = type === 'error' ? '#DC143C' : '#1A2E1A';
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
-  }
-};
+  };
 
-window.AradelAuth = AradelAuth;
+  window.AradelAuth = AradelAuth;
+})();
