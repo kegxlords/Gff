@@ -21,13 +21,28 @@
       <a class="adm-chip on" href="/admin/settings">Settings</a>
     </nav>
 
-    <h2 class="adm-title">Gift Codes</h2>
+    <h2 class="adm-title">Platform Settings</h2>
+    <div class="adm-card">
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Withdrawal Fee (%)</label>
+      <input class="adm-input" id="setFee" type="number" min="0" max="90" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Referral Bonus (%)</label>
+      <input class="adm-input" id="setBonus" type="number" min="0" max="90" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Telegram Group URL</label>
+      <input class="adm-input" id="setTgGroup" placeholder="https://t.me/..." />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Telegram Customer Service URL</label>
+      <input class="adm-input" id="setTgSupport" placeholder="https://t.me/..." />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">WhatsApp Group URL (optional)</label>
+      <input class="adm-input" id="setWa" placeholder="https://chat.whatsapp.com/..." />
+      <button class="adm-go" onclick="saveSettings()">💾 Save Settings</button>
+    </div>
+
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">Gift Codes</h2>
     <input class="adm-input" id="gcCode" placeholder="Code (e.g. GFF-NEWYEAR)" />
     <input class="adm-input" id="gcValue" type="number" placeholder="Value in CFA (e.g. 2000)" />
     <button class="adm-go" onclick="createCode()">+ Create Gift Code</button>
     <div id="gcList"></div>
 
-    <h2 class="adm-title" style="font-size:16px;margin-top:24px;">Platform Tools</h2>
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">Platform Tools</h2>
     <button class="adm-go" onclick="runIncome()">🌙 Run Daily Income Now</button>
     <input class="adm-input" id="newAdminEmail" placeholder="Email to grant admin..." style="margin-top:8px;" />
     <button class="adm-go" onclick="makeAdmin()">👑 Grant Admin by Email</button>
@@ -36,9 +51,9 @@
       <div class="adm-name">ℹ️ Notes</div>
       <div class="adm-sub">
         • Daily income auto-runs nightly at 23:00 UTC via Vercel cron.<br>
-        • Deposit payment details are edited in <b>recharge.html</b>.<br>
-        • Withdrawal fee is fixed at 15% in <b>api/withdraw/create.js</b>.<br>
-        • Referral commission is fixed at 22% in <b>api/deposit/approve.js</b>.
+        • Fee & bonus changes apply to NEW requests instantly.<br>
+        • Support links appear on /support and the dashboard popup.<br>
+        • Deposit payment details are edited in <b>recharge.html</b>.
       </div>
     </div>
   </div>
@@ -59,6 +74,29 @@
       const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
       if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
       return s;
+    }
+
+    async function saveSettings() {
+      const payload = {
+        withdrawal_fee_percent: Number(document.getElementById('setFee').value),
+        referral_bonus_percent: Number(document.getElementById('setBonus').value),
+        telegram_group_url: document.getElementById('setTgGroup').value.trim(),
+        telegram_support_url: document.getElementById('setTgSupport').value.trim(),
+        whatsapp_group_url: document.getElementById('setWa').value.trim()
+      };
+      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Settings saved — live across the platform');
+    }
+
+    async function loadSettings() {
+      const { data: s } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
+      if (!s) return;
+      document.getElementById('setFee').value = s.withdrawal_fee_percent;
+      document.getElementById('setBonus').value = s.referral_bonus_percent;
+      document.getElementById('setTgGroup').value = s.telegram_group_url || '';
+      document.getElementById('setTgSupport').value = s.telegram_support_url || '';
+      document.getElementById('setWa').value = s.whatsapp_group_url || '';
     }
 
     async function createCode() {
@@ -108,7 +146,7 @@
       const email = document.getElementById('newAdminEmail').value.trim().toLowerCase();
       if (!email) return AradelAuth.toast('Enter an email', 'error');
       if (!confirm('Grant admin to ' + email + '?')) return;
-      const { data, error } = await window.sb.from('users').update({ is_admin: true }).eq('email', email);
+      const { error } = await window.sb.from('users').update({ is_admin: true }).eq('email', email);
       if (error) return AradelAuth.toast(error.message, 'error');
       AradelAuth.toast('Admin granted (if the email exists)');
       document.getElementById('newAdminEmail').value = '';
@@ -117,6 +155,7 @@
     document.addEventListener('DOMContentLoaded', async function () {
       SESSION = await adminGuard();
       if (!SESSION) return;
+      loadSettings();
       loadCodes();
     });
   </script>
