@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Bank Accounts - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .bk-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;}
+    .sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .sec-head h2 { font-size:19px; font-weight:800; margin:0; }
+    .add-toggle { background: linear-gradient(135deg,var(--gff-gold),var(--gff-gold-dark)); color:var(--gff-blue-dark); border:none; padding:9px 16px; border-radius:12px; font-weight:800; font-size:12.5px; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(255,215,0,.3); }
+    .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:18px; backdrop-filter:blur(10px); display:none; }
+    .form-card.show { display:block; }
+    .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
+    .f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
+    .f-inp:focus { outline:none; border-color:var(--gff-blue); }
+    .f-save { width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); color:#fff; font-weight:800; font-family:inherit; font-size:14px; cursor:pointer; }
+    .bank-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:16px; margin-bottom:12px; backdrop-filter:blur(10px); box-shadow:0 6px 20px rgba(0,51,160,.06); }
+    .bc-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .bc-icon { width:42px; height:42px; border-radius:12px; background:#E8EEFB; display:flex; align-items:center; justify-content:center; }
+    .bc-icon svg { width:20px; height:20px; stroke:var(--gff-blue); stroke-width:2; fill:none; }
+    .bc-name { font-weight:800; font-size:15px; }
+    .bc-acct { font-size:13px; color:var(--pf-mut); margin-top:2px; letter-spacing:1px; }
+    .bc-default { margin-left:auto; background:rgba(34,139,34,.1); color:var(--gff-green); border:1px solid rgba(34,139,34,.25); font-size:10px; font-weight:800; padding:4px 10px; border-radius:10px; }
+    .bc-actions { display:flex; gap:8px; border-top:1px solid rgba(0,51,160,.06); padding-top:10px; }
+    .bc-btn { flex:1; padding:10px; border-radius:10px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; border:1px solid var(--pf-line); background:#fff; color:var(--gff-blue); }
+    .bc-btn.danger { color:var(--gff-red); }
+    .bk-empty { text-align:center; padding:36px 20px; background:var(--pf-card); border:2px dashed rgba(0,51,160,.12); border-radius:20px; color:var(--pf-mut); font-size:14px; }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="bk-wrap">
+    <div class="sec-head rise d1">
+      <h2>Bank Accounts</h2>
+      <button class="add-toggle" onclick="toggleForm()">+ Add Bank</button>
+    </div>
+
+    <div class="form-card rise d1" id="addForm">
+      <label class="f-lbl">Bank Name</label>
+      <input class="f-inp" id="bankName" placeholder="e.g. Ecobank / MTN MoMo" />
+      <label class="f-lbl">Account Name</label>
+      <input class="f-inp" id="acctName" placeholder="Full name on account" />
+      <label class="f-lbl">Account Number</label>
+      <input class="f-inp" id="acctNumber" placeholder="0000000000" inputmode="numeric" />
+      <button class="f-save" onclick="saveBank()">Save Bank Account</button>
+    </div>
+
+    <div id="bankList" class="rise d2"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let UID = null;
+
+    function toggleForm() { document.getElementById('addForm').classList.toggle('show'); }
+
+    async function saveBank() {
+      const bank_name = document.getElementById('bankName').value.trim();
+      const account_name = document.getElementById('acctName').value.trim();
+      const account_number = document.getElementById('acctNumber').value.trim();
+      if (!bank_name || !account_name || !account_number) return AradelAuth.toast('Fill all fields', 'error');
+
+      const { count } = await window.sb.from('bank_cards').select('id', { count: 'exact', head: true }).eq('user_id', UID);
+      const { error } = await window.sb.from('bank_cards').insert({
+        user_id: UID, bank_name, account_name, account_number, is_default: count === 0
+      });
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Bank account saved');
+      document.getElementById('addForm').classList.remove('show');
+      document.getElementById('bankName').value = document.getElementById('acctName').value = document.getElementById('acctNumber').value = '';
+      load();
+    }
+
+    async function setDefault(id) {
+      await window.sb.from('bank_cards').update({ is_default: false }).eq('user_id', UID);
+      await window.sb.from('bank_cards').update({ is_default: true }).eq('id', id);
+      AradelAuth.toast('Default bank updated');
+      load();
+    }
+
+    async function removeBank(id) {
+      if (!confirm('Delete this bank account?')) return;
+      await window.sb.from('bank_cards').delete().eq('id', id);
+      AradelAuth.toast('Bank account deleted');
+      load();
+    }
+
+    async function load() {
+      const { data: cards } = await window.sb.from('bank_cards').select('*').eq('user_id', UID).order('created_at', { ascending: true });
+      const list = document.getElementById('bankList');
+      if (!cards || !cards.length) {
+        list.innerHTML = '<div class="bk-empty">No bank accounts yet.<br>Add one to receive withdrawals.</div>';
+        return;
+      }
+      list.innerHTML = cards.map(c => `
+        <div class="bank-card">
+          <div class="bc-top">
+            <div class="bc-icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+            <div>
+              <div class="bc-name">${c.bank_name}</div>
+              <div class="bc-acct">•••• ${c.account_number.slice(-4)} — ${c.account_name}</div>
+            </div>
+            ${c.is_default ? '<span class="bc-default">DEFAULT</span>' : ''}
+          </div>
+          <div class="bc-actions">
+            ${!c.is_default ? `<button class="bc-btn" onclick="setDefault('${c.id}')">Set Default</button>` : ''}
+            <button class="bc-btn danger" onclick="removeBank('${c.id}')">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      UID = session.user.id;
+      load();
+    });
+  </script>
+</body>
+</html>
