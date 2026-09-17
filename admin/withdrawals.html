@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Withdrawals - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip on" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Withdrawal Requests</h2>
+    <div class="adm-tabs">
+      <div class="adm-tab on" data-t="pending">Pending</div>
+      <div class="adm-tab" data-t="approved">Approved</div>
+      <div class="adm-tab" data-t="rejected">Rejected</div>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null, TAB = 'pending';
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function act(id, action) {
+      if (!confirm(`${action === 'approve' ? 'Mark as PAID?' : 'Reject and refund the user?'}`)) return;
+      const res = await fetch('/api/withdraw/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+        body: JSON.stringify({ action, request_id: id })
+      });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? 'Withdrawal ' + action + 'd' : d.error, d.ok ? 'success' : 'error');
+      if (d.ok) load();
+    }
+
+    async function load() {
+      const { data: wds } = await window.sb.from('withdrawal_requests')
+        .select('*, users(full_name, email), bank_cards(bank_name, account_name, account_number)')
+        .eq('status', TAB).order('created_at', { ascending: false }).limit(50);
+
+      const list = document.getElementById('list');
+      if (!wds || !wds.length) { list.innerHTML = '<div class="adm-empty">No ' + TAB + ' withdrawals.</div>'; return; }
+
+      list.innerHTML = wds.map(w => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${w.users?.full_name || 'User'}</div>
+              <div class="adm-sub">${w.users?.email || ''}<br>
+                 ${w.bank_cards?.bank_name || '—'} • ${w.bank_cards?.account_name || ''} • ${w.bank_cards?.account_number || ''}<br>
+                ${new Date(w.created_at).toLocaleString()}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt red">${fmt(w.amount)}</div>
+              <div class="adm-sub">Fee ${fmt(w.fee_15percent)} • Pay <b style="color:#228B22">${fmt(w.net_amount)}</b></div>
+              <span class="adm-st ${w.status}">${w.status.toUpperCase()}</span>
+            </div>
+          </div>
+          ${TAB === 'pending' ? `
+          <div class="adm-actions">
+            <button class="adm-btn ok" onclick="act('${w.id}','approve')">✓ Mark Paid</button>
+            <button class="adm-btn no" onclick="act('${w.id}','reject')">✕ Reject + Refund</button>
+          </div>` : ''}
+        </div>`).join('');
+    }
+
+    document.querySelector('.adm-tabs').addEventListener('click', e => {
+      const t = e.target.closest('.adm-tab');
+      if (!t) return;
+      document.querySelector('.adm-tab.on').classList.remove('on');
+      t.classList.add('on');
+      TAB = t.dataset.t;
+      load();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      load();
+    });
+  </script>
+</body>
+</html>
