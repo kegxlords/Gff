@@ -30,7 +30,8 @@
     { "source": "/admin/users", "destination": "/admin/users.html" },
     { "source": "/admin/investments", "destination": "/admin/investments.html" },
     { "source": "/admin/messages", "destination": "/admin/messages.html" },
-    { "source": "/admin/settings", "destination": "/admin/settings.html" }
+    { "source": "/admin/settings", "destination": "/admin/settings.html" },
+    { "source": "/support", "destination": "/support.html" },
   ],
   "headers": [
     {
