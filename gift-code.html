@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Gift Code - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .gc-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;}
+    .gc-hero { background: linear-gradient(135deg,var(--gff-gold),var(--gff-gold-dark)); border-radius:24px; padding:28px 22px; text-align:center; margin-bottom:18px; box-shadow:0 12px 30px rgba(255,215,0,.3); position:relative; overflow:hidden; }
+    .gc-hero::after { content:'🎁'; position:absolute; right:14px; bottom:-10px; font-size:80px; opacity:.2; }
+    .gc-hero .ico { font-size:40px; }
+    .gc-hero h2 { font-family:'Fraunces',serif; font-size:20px; color:var(--gff-blue-dark); margin:8px 0 4px; }
+    .gc-hero p { font-size:12.5px; color:#6B5200; font-weight:600; margin:0; }
+    .gc-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; backdrop-filter:blur(10px); margin-bottom:18px; }
+    .gc-inp { width:100%; padding:15px; border-radius:14px; border:2px dashed rgba(0,51,160,.2); background:#fff; font-family:inherit; font-size:16px; font-weight:800; letter-spacing:2px; text-transform:uppercase; text-align:center; color:var(--gff-blue-dark); margin-bottom:14px; }
+    .gc-inp:focus { outline:none; border-color:var(--gff-gold-dark); border-style:solid; }
+    .gc-btn { width:100%; padding:15px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); color:#fff; font-weight:800; font-family:inherit; font-size:15px; cursor:pointer; box-shadow:0 8px 20px rgba(0,51,160,.28); }
+    .gc-btn:disabled { opacity:.6; }
+    .sec-title { font-size:15px; font-weight:800; margin:0 0 12px; }
+    .gc-row { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:14px; padding:13px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+    .gc-row .amt { font-weight:800; color:var(--gff-green); }
+    .gc-row .dt { font-size:11px; color:var(--pf-mut); margin-top:2px; }
+    .gc-empty { text-align:center; color:var(--pf-mut); font-size:13px; padding:16px; }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="gc-wrap">
+    <div class="gc-hero rise d1">
+      <div class="ico">🎁</div>
+      <h2>Redeem a Gift Code</h2>
+      <p>Enter your bonus code to credit your wallet instantly</p>
+    </div>
+
+    <div class="gc-card rise d1">
+      <input class="gc-inp" id="gcInput" placeholder="ENTER CODE" maxlength="30" />
+      <button class="gc-btn" id="gcBtn" onclick="redeem()">Redeem Code</button>
+    </div>
+
+    <h3 class="sec-title rise d2">My Redemptions</h3>
+    <div id="gcList" class="rise d2"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let UID = null;
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function redeem() {
+      const code = document.getElementById('gcInput').value.trim();
+      if (!code) return AradelAuth.toast('Enter a code first', 'error');
+      const btn = document.getElementById('gcBtn');
+      btn.disabled = true; btn.textContent = 'Redeeming...';
+      try {
+        const { data, error } = await window.sb.rpc('redeem_gift_code', { p_user_id: UID, p_code: code });
+        if (error) throw new Error(error.message);
+        if (!data?.ok) throw new Error(data?.error || 'Redemption failed');
+        AradelAuth.toast('🎁 +' + fmt(data.value) + ' credited!');
+        document.getElementById('gcInput').value = '';
+        load();
+      } catch (e) {
+        AradelAuth.toast(e.message, 'error');
+      }
+      btn.disabled = false; btn.textContent = 'Redeem Code';
+    }
+
+    async function load() {
+      const { data: txs } = await window.sb.from('wallet_transactions')
+        .select('*').eq('user_id', UID).eq('type', 'gift_code')
+        .order('created_at', { ascending: false }).limit(10);
+      const list = document.getElementById('gcList');
+      if (!txs || !txs.length) { list.innerHTML = '<div class="gc-empty">No codes redeemed yet.</div>'; return; }
+      list.innerHTML = txs.map(t => `
+        <div class="gc-row">
+          <div>${t.description}<div class="dt">${new Date(t.created_at).toLocaleDateString()}</div></div>
+          <div class="amt">+${fmt(t.amount)}</div>
+        </div>`).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      UID = session.user.id;
+      load();
+    });
+  </script>
+</body>
+</html>
