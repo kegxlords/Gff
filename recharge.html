@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Deposit - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .rc-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;} .d3{animation-delay:.19s;}
+    .pay-card { background: linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); border-radius:22px; padding:20px; color:#fff; margin-bottom:18px; position:relative; overflow:hidden; box-shadow:0 12px 30px rgba(0,51,160,.25); }
+    .pay-card::after { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px; background:radial-gradient(circle,rgba(255,215,0,.2),transparent 70%); border-radius:50%; }
+    .pay-title { font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; opacity:.85; margin-bottom:12px; }
+    .pay-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.12); font-size:13.5px; position:relative; z-index:1; }
+    .pay-row:last-child { border-bottom:none; }
+    .pay-row span { opacity:.75; }
+    .pay-row strong { font-weight:800; display:flex; align-items:center; gap:8px; }
+    .copy-mini { background:rgba(255,255,255,.15); border:none; color:var(--gff-gold); font-size:10px; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; font-family:inherit; }
+    .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:18px; backdrop-filter:blur(10px); }
+    .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
+    .f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
+    .f-inp:focus { outline:none; border-color:var(--gff-blue); }
+    .f-save { width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--gff-gold),var(--gff-gold-dark)); color:var(--gff-blue-dark); font-weight:800; font-family:inherit; font-size:14px; cursor:pointer; box-shadow:0 8px 18px rgba(255,215,0,.3); }
+    .f-save:disabled { opacity:.6; }
+    .sec-title { font-size:15px; font-weight:800; margin:0 0 12px; }
+    .dep-row { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:16px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+    .dep-amt { font-weight:800; font-size:15px; }
+    .dep-sub { font-size:11px; color:var(--pf-mut); margin-top:3px; }
+    .st { padding:4px 10px; border-radius:10px; font-size:10px; font-weight:800; }
+    .st.pending { background:#FFF8E1; color:#B8860B; }
+    .st.approved { background:rgba(34,139,34,.1); color:var(--gff-green); }
+    .st.rejected { background:rgba(220,20,60,.08); color:var(--gff-red); }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="rc-wrap">
+
+    <!-- Payment instructions (EDIT THESE DETAILS) -->
+    <div class="pay-card rise d1">
+      <div class="pay-title">Pay To / Send Funds To</div>
+      <div class="pay-row"><span>Bank</span><strong id="payBank">GFF Microfinance Bank</strong></div>
+      <div class="pay-row"><span>Account Number</span><strong><span id="payAcct">0001234567</span><button class="copy-mini" onclick="copyTxt('payAcct')">COPY</button></strong></div>
+      <div class="pay-row"><span>Account Name</span><strong>Green Farm Fortune</strong></div>
+      <div class="pay-row"><span>Mobile Money</span><strong><span id="payMomo">+237600000000</span><button class="copy-mini" onclick="copyTxt('payMomo')">COPY</button></strong></div>
+    </div>
+
+    <div class="form-card rise d2">
+      <label class="f-lbl">Amount (CFA) — min 1,000</label>
+      <input class="f-inp" id="depAmount" type="number" min="1000" placeholder="e.g. 10000" inputmode="numeric" />
+      <label class="f-lbl">Payment Method</label>
+      <select class="f-inp" id="depMethod">
+        <option>Bank Transfer</option>
+        <option>Mobile Money</option>
+      </select>
+      <label class="f-lbl">Transaction Reference / Sender Name</label>
+      <input class="f-inp" id="depRef" placeholder="e.g. TXN-8842 or sender phone" />
+      <button class="f-save" id="depBtn" onclick="submitDeposit()">Submit Deposit Request</button>
+    </div>
+
+    <h3 class="sec-title rise d3">My Deposit Requests</h3>
+    <div id="depList" class="rise d3"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let UID = null;
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    function copyTxt(id) {
+      const t = document.getElementById(id).textContent;
+      navigator.clipboard ? navigator.clipboard.writeText(t).then(() => AradelAuth.toast('Copied')) : AradelAuth.toast(t);
+    }
+
+    async function submitDeposit() {
+      const btn = document.getElementById('depBtn');
+      const amount = Number(document.getElementById('depAmount').value);
+      const method = document.getElementById('depMethod').value;
+      const reference = document.getElementById('depRef').value.trim();
+
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        const res = await fetch('/api/deposit/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: UID, amount, method, reference })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        AradelAuth.toast('Deposit submitted — awaiting approval');
+        document.getElementById('depAmount').value = '';
+        document.getElementById('depRef').value = '';
+        load();
+      } catch (e) {
+        AradelAuth.toast(e.message, 'error');
+      }
+      btn.disabled = false; btn.textContent = 'Submit Deposit Request';
+    }
+
+    async function load() {
+      const { data: deps } = await window.sb.from('deposit_requests').select('*').eq('user_id', UID).order('created_at', { ascending: false }).limit(10);
+      const list = document.getElementById('depList');
+      if (!deps || !deps.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:16px;">No deposit requests yet.</div>'; return; }
+      list.innerHTML = deps.map(d => `
+        <div class="dep-row">
+          <div>
+            <div class="dep-amt">${fmt(d.amount)}</div>
+            <div class="dep-sub">${d.method} • ${new Date(d.created_at).toLocaleDateString()}</div>
+          </div>
+          <span class="st ${d.status}">${d.status.toUpperCase()}</span>
+        </div>`).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      UID = session.user.id;
+      load();
+    });
+  </script>
+</body>
+</html>
