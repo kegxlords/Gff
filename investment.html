@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>My Investments - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root {
+      --pf-card: rgba(255, 255, 255, 0.78);
+      --pf-line: rgba(0, 51, 160, 0.07);
+      --pf-txt: #0E1B33;
+      --pf-mut: #7A8699;
+    }
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      background: linear-gradient(180deg, #FFFBF0 0%, #FFF5E0 100%);
+      background-attachment: fixed;
+      font-family: 'Inter', sans-serif; color: var(--pf-txt);
+      margin: 0; padding-bottom: calc(96px + env(safe-area-inset-bottom));
+      -webkit-font-smoothing: antialiased;
+    }
+    .inv-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .rise { opacity: 0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; } .d3 { animation-delay: .19s; }
+
+    /* Summary */
+    .inv-summary {
+      background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+      border-radius: 24px; padding: 22px; color: #fff; margin-bottom: 18px;
+      position: relative; overflow: hidden;
+      box-shadow: 0 12px 34px rgba(0, 51, 160, 0.28);
+    }
+    .inv-summary::after {
+      content: ''; position: absolute; top: -50px; right: -40px; width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(255,215,0,0.22) 0%, transparent 70%); border-radius: 50%;
+    }
+    .inv-sum-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: relative; z-index: 1; }
+    .inv-sum-cell { text-align: center; }
+    .inv-sum-val { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 800; }
+    .inv-sum-val.gold { color: var(--gff-gold); }
+    .inv-sum-val.green { color: #7CF09C; }
+    .inv-sum-lbl { font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; opacity: .75; font-weight: 700; margin-top: 3px; }
+
+    /* Tabs */
+    .inv-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .inv-tab {
+      flex: 1; padding: 11px; border-radius: 14px; text-align: center;
+      background: var(--pf-card); border: 1px solid var(--pf-line);
+      font-size: 13px; font-weight: 700; color: var(--pf-mut); cursor: pointer; transition: all .2s;
+    }
+    .inv-tab.on {
+      background: linear-gradient(135deg, var(--gff-blue), var(--gff-blue-dark));
+      color: #fff; border-color: transparent;
+      box-shadow: 0 6px 16px rgba(0, 51, 160, 0.25);
+    }
+
+    /* Investment cards */
+    .inv-card {
+      background: var(--pf-card); border: 1px solid var(--pf-line);
+      border-radius: 20px; padding: 18px; margin-bottom: 14px;
+      backdrop-filter: blur(10px); box-shadow: 0 6px 20px rgba(0, 51, 160, 0.06);
+    }
+    .inv-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .inv-name { font-weight: 800; font-size: 15.5px; color: var(--gff-blue-dark); }
+    .inv-sector { font-size: 11px; color: var(--pf-mut); margin-top: 2px; }
+    .inv-status { padding: 5px 12px; border-radius: 12px; font-size: 10.5px; font-weight: 800; letter-spacing: .5px; }
+    .inv-status.growing { background: rgba(34, 139, 34, 0.10); color: var(--gff-green); border: 1px solid rgba(34, 139, 34, 0.25); }
+    .inv-status.done { background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark)); color: var(--gff-blue-dark); }
+    .inv-progress { background: rgba(0, 51, 160, 0.07); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .inv-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--gff-green), var(--gff-green-light)); transition: width .8s cubic-bezier(.22,1,.36,1); }
+    .inv-bar.gold { background: linear-gradient(90deg, var(--gff-gold), var(--gff-gold-dark)); }
+    .inv-days { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--pf-mut); font-weight: 600; margin-bottom: 12px; }
+    .inv-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(0,51,160,0.06); padding-top: 12px; }
+    .inv-foot-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--pf-mut); font-weight: 700; }
+    .inv-foot-val { font-size: 14px; font-weight: 800; color: var(--gff-green); margin-top: 2px; }
+    .inv-foot-val.blue { color: var(--gff-blue); }
+
+    .inv-empty { text-align: center; padding: 40px 20px; background: var(--pf-card); border: 2px dashed rgba(0,51,160,0.12); border-radius: 20px; }
+    .inv-empty p { color: var(--pf-mut); font-size: 14px; margin: 0 0 16px; }
+    .inv-empty button {
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark); border: none; padding: 12px 26px;
+      border-radius: 14px; font-weight: 800; font-family: inherit; cursor: pointer;
+      box-shadow: 0 8px 20px rgba(255, 215, 0, 0.35);
+    }
+
+    #toast {
+      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+      background: var(--gff-blue-dark); color: #fff; padding: 12px 24px;
+      border-radius: 25px; font-size: 13px; font-weight: 700; z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+
+  <div class="inv-wrap">
+    <div class="inv-summary rise d1">
+      <div class="inv-sum-grid">
+        <div class="inv-sum-cell">
+          <div class="inv-sum-val" id="sumActive">0</div>
+          <div class="inv-sum-lbl">Active Farms</div>
+        </div>
+        <div class="inv-sum-cell">
+          <div class="inv-sum-val green" id="sumDaily">0 CFA</div>
+          <div class="inv-sum-lbl">Daily Income</div>
+        </div>
+        <div class="inv-sum-cell">
+          <div class="inv-sum-val gold" id="sumEarned">0 CFA</div>
+          <div class="inv-sum-lbl">Total Earned</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-tabs rise d2">
+      <div class="inv-tab on" data-tab="active">Growing</div>
+      <div class="inv-tab" data-tab="completed">Harvested</div>
+    </div>
+
+    <div id="invList" class="rise d3"></div>
+  </div>
+
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let PLANS = [], TAB = 'active';
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    function render() {
+      const list = document.getElementById('invList');
+      const items = PLANS.filter(p => TAB === 'active' ? p.status === 'active' : p.status === 'completed');
+
+      if (!items.length) {
+        list.innerHTML = `
+          <div class="inv-empty">
+            <p>${TAB === 'active' ? 'No growing farms yet. Plant your first fortune!' : 'No harvested farms yet.'}</p>
+            <button onclick="window.location.href='/VIP'">Browse Packages</button>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = items.map(p => {
+        const duration = p.products?.duration_days || 30;
+        const days = p.days_collected || 0;
+        const pct = Math.min(100, Math.round((days / duration) * 100));
+        const earned = days * Number(p.daily_income);
+        const start = new Date(p.start_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+        const end = new Date(p.end_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+        return `
+          <div class="inv-card">
+            <div class="inv-head">
+              <div>
+                <div class="inv-name">${p.products?.name || 'VIP Plan'}</div>
+                <div class="inv-sector">${p.products?.sector || ''}</div>
+              </div>
+              <span class="inv-status ${p.status === 'active' ? 'growing' : 'done'}">${p.status === 'active' ? 'GROWING' : 'HARVESTED'}</span>
+            </div>
+            <div class="inv-progress"><div class="inv-bar ${p.status === 'completed' ? 'gold' : ''}" style="width: ${pct}%"></div></div>
+            <div class="inv-days"><span>${days}/${duration} days collected</span><span>${pct}%</span></div>
+            <div class="inv-foot">
+              <div>
+                <div class="inv-foot-lbl">Daily Income</div>
+                <div class="inv-foot-val">+${fmt(p.daily_income)}/day</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="inv-foot-lbl">Earned So Far</div>
+                <div class="inv-foot-val blue">${fmt(earned)}</div>
+              </div>
+            </div>
+            <div class="inv-days" style="margin:10px 0 0;"><span>Started ${start}</span><span>Ends ${end}</span></div>
+          </div>`;
+      }).join('');
+    }
+
+    document.querySelector('.inv-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.inv-tab');
+      if (!tab) return;
+      document.querySelector('.inv-tab.on').classList.remove('on');
+      tab.classList.add('on');
+      TAB = tab.dataset.tab;
+      render();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      const uid = session.user.id;
+
+      const { data: plans } = await window.sb
+        .from('user_products')
+        .select('*, products(name, sector, duration_days)')
+        .eq('user_id', uid)
+        .order('start_date', { ascending: false });
+
+      PLANS = plans || [];
+
+      const active = PLANS.filter(p => p.status === 'active');
+      const dailyTotal = active.reduce((s, p) => s + Number(p.daily_income), 0);
+      const earnedTotal = PLANS.reduce((s, p) => s + (p.days_collected || 0) * Number(p.daily_income), 0);
+
+      document.getElementById('sumActive').textContent = active.length;
+      document.getElementById('sumDaily').textContent = fmt(dailyTotal);
+      document.getElementById('sumEarned').textContent = fmt(earnedTotal);
+
+      render();
+    });
+  </script>
+</body>
+</html>
