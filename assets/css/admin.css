@@ -1,0 +1,38 @@
+/* ============================================================
+   GFF ADMIN PANEL STYLES
+   ============================================================ */
+.adm-wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 110px; }
+.adm-nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; scrollbar-width: none; }
+.adm-nav::-webkit-scrollbar { display: none; }
+.adm-chip { flex-shrink: 0; padding: 9px 16px; border-radius: 18px; background: rgba(255,255,255,.72); border: 1px solid rgba(0,51,160,.07); font-size: 12px; font-weight: 700; color: #7A8699; text-decoration: none; }
+.adm-chip.on { background: linear-gradient(135deg, #0033A0, #002171); color: #fff; border-color: transparent; }
+.adm-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; color: #002171; margin: 0 0 14px; }
+.adm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+.adm-stat { background: rgba(255,255,255,.72); border: 1px solid rgba(0,51,160,.07); border-radius: 16px; padding: 14px 10px; text-align: center; }
+.adm-stat b { display: block; font-family: 'Fraunces', serif; font-size: 16px; font-weight: 800; color: #002171; }
+.adm-stat span { font-size: 9.5px; font-weight: 700; letter-spacing: .6px; color: #7A8699; text-transform: uppercase; }
+.adm-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.adm-tab { flex: 1; padding: 10px; border-radius: 12px; text-align: center; background: rgba(255,255,255,.72); border: 1px solid rgba(0,51,160,.07); font-size: 12.5px; font-weight: 700; color: #7A8699; cursor: pointer; }
+.adm-tab.on { background: #0033A0; color: #fff; border-color: transparent; }
+.adm-card { background: rgba(255,255,255,.78); border: 1px solid rgba(0,51,160,.07); border-radius: 18px; padding: 14px 16px; margin-bottom: 10px; }
+.adm-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.adm-name { font-weight: 800; font-size: 14px; color: #0E1B33; }
+.adm-sub { font-size: 11.5px; color: #7A8699; margin-top: 2px; line-height: 1.5; }
+.adm-amt { font-family: 'Fraunces', serif; font-weight: 800; font-size: 15px; color: #002171; white-space: nowrap; }
+.adm-amt.green { color: #228B22; } .adm-amt.red { color: #DC143C; } .adm-amt.gold { color: #B8860B; }
+.adm-actions { display: flex; gap: 8px; margin-top: 10px; }
+.adm-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: 800; font-size: 12px; font-family: inherit; cursor: pointer; }
+.adm-btn.ok { background: #228B22; color: #fff; }
+.adm-btn.no { background: #DC143C; color: #fff; }
+.adm-btn.plain { background: rgba(0,51,160,.08); color: #0033A0; }
+.adm-st { padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: 800; }
+.adm-st.pending { background: #FFF8E1; color: #B8860B; }
+.adm-st.approved { background: rgba(34,139,34,.1); color: #228B22; }
+.adm-st.rejected { background: rgba(220,20,60,.08); color: #DC143C; }
+.adm-st.active { background: rgba(34,139,34,.1); color: #228B22; }
+.adm-st.completed { background: rgba(0,51,160,.08); color: #0033A0; }
+.adm-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(0,51,160,.1); background: #fff; font-family: inherit; font-size: 14px; margin-bottom: 12px; color: #0E1B33; }
+.adm-input:focus { outline: none; border-color: #0033A0; }
+textarea.adm-input { min-height: 90px; resize: vertical; }
+.adm-go { width: 100%; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, #0033A0, #002171); color: #fff; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
+.adm-empty { text-align: center; color: #7A8699; font-size: 13px; padding: 24px; background: rgba(255,255,255,.6); border: 2px dashed rgba(0,51,160,.12); border-radius: 16px; }
