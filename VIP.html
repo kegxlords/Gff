@@ -217,7 +217,7 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
-    let PRODUCTS = [], BALANCE = 0, ACTIVE_IDS = [], SELECTED = null;
+    let PRODUCTS = [], BALANCE = 0, ACTIVE_COUNT = {}, SELECTED = null;
 
     const EMOJI = {
       'Crop Farming': '🌾', 'Livestock Farming': '🐄', 'Poultry Farming': '🐔',
@@ -237,12 +237,13 @@
         const total = p.daily_income * p.duration_days;
         const roi = Math.round((total / p.amount) * 100);
         const barWidth = Math.min(100, Math.round(roi / 10));
-        const hasActive = ACTIVE_IDS.includes(p.id);
+        const count = ACTIVE_COUNT[p.id] || 0;
+        const quotaFull = count >= 3;
         const canAfford = BALANCE >= p.amount;
 
         let btn;
-        if (hasActive) {
-          btn = `<button class="pkg-btn active-plan" onclick="window.location.href='/investment'">View Farm</button>`;
+        if (quotaFull) {
+          btn = `<button class="pkg-btn active-plan" onclick="window.location.href='/investment'">View Farms</button>`;
         } else if (!canAfford) {
           btn = `<button class="pkg-btn locked" onclick="window.location.href='/recharge'">Deposit First</button>`;
         } else {
@@ -255,7 +256,7 @@
               <div class="pkg-img ${SCLASS[p.sector] || 'sector-crop'}">${EMOJI[p.sector] || '🌱'}</div>
               <div class="pkg-info">
                 <div class="pkg-name">${p.name} — ${p.sector}</div>
-                <span class="pkg-quota ${hasActive ? 'full' : ''}">Quota ${hasActive ? 1 : 0}/1</span>
+                <span class="pkg-quota ${quotaFull ? 'full' : ''}">Quota ${count}/3</span>
                 <div class="pkg-row"><span>ROI Progress</span><b class="pct">${roi}%</b></div>
                 <div class="pkg-bar"><i style="width: ${barWidth}%"></i></div>
                 <div class="pkg-row"><span>Daily Income</span><b class="green">${fmt(p.daily_income)} CFA</b></div>
@@ -273,8 +274,9 @@
     function openSheet(id) {
       SELECTED = PRODUCTS.find(p => p.id === id);
       if (!SELECTED) return;
+      const count = ACTIVE_COUNT[SELECTED.id] || 0;
       document.getElementById('sheetTitle').textContent = SELECTED.name;
-      document.getElementById('sheetSector').textContent = (EMOJI[SELECTED.sector] || '🌱') + ' ' + SELECTED.sector;
+      document.getElementById('sheetSector').textContent = (EMOJI[SELECTED.sector] || '🌱') + ' ' + SELECTED.sector + ' • Quota ' + count + '/3';
       document.getElementById('sheetAmount').textContent = fmt(SELECTED.amount) + ' CFA';
       document.getElementById('sheetDaily').textContent = fmt(SELECTED.daily_income) + ' CFA / day';
       document.getElementById('sheetDuration').textContent = SELECTED.duration_days + ' Days';
@@ -316,8 +318,10 @@
       const { data: prods } = await window.sb.from('products').select('*').eq('is_active', true).order('amount', { ascending: true });
       PRODUCTS = prods || [];
 
+      // Count active plans per package (quota x/3)
       const { data: owned } = await window.sb.from('user_products').select('product_id').eq('user_id', uid).eq('status', 'active');
-      ACTIVE_IDS = (owned || []).map(o => o.product_id);
+      ACTIVE_COUNT = {};
+      (owned || []).forEach(o => { ACTIVE_COUNT[o.product_id] = (ACTIVE_COUNT[o.product_id] || 0) + 1; });
 
       render();
     });
