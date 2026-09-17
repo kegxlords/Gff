@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Support - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .sp-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;} .d3{animation-delay:.19s;}
+    .sp-hero { background: linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); border-radius:24px; padding:26px 22px; color:#fff; text-align:center; margin-bottom:18px; position:relative; overflow:hidden; box-shadow:0 12px 34px rgba(0,51,160,.28); }
+    .sp-hero::after { content:''; position:absolute; top:-50px; right:-40px; width:160px; height:160px; background:radial-gradient(circle,rgba(255,215,0,.22),transparent 70%); border-radius:50%; }
+    .sp-hero .ico { font-size:42px; }
+    .sp-hero h2 { font-family:'Fraunces',serif; font-size:21px; margin:8px 0 4px; }
+    .sp-hero p { font-size:12.5px; opacity:.85; margin:0; }
+    .sp-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:12px; backdrop-filter:blur(10px); display:flex; align-items:center; gap:14px; text-decoration:none; transition:transform .18s; }
+    .sp-card:active { transform:scale(.98); }
+    .sp-ic { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .sp-ic.tg { background:rgba(34,158,217,.12); }
+    .sp-ic.wa { background:rgba(37,211,102,.12); }
+    .sp-ic.cs { background:rgba(255,215,0,.15); }
+    .sp-txt { flex:1; }
+    .sp-txt b { display:block; font-size:14.5px; color:var(--pf-txt); }
+    .sp-txt span { font-size:11.5px; color:var(--pf-mut); line-height:1.5; display:block; margin-top:2px; }
+    .sp-go { color:#C4CAD4; font-size:18px; }
+    .sp-note { background:rgba(34,139,34,.06); border:1px solid rgba(34,139,34,.15); border-radius:16px; padding:14px 16px; font-size:12px; color:#1B6E1B; line-height:1.7; }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="sp-wrap">
+    <div class="sp-hero rise d1">
+      <div class="ico">🎧</div>
+      <h2>We're Here to Help</h2>
+      <p>Official channels — beware of impersonators</p>
+    </div>
+
+    <a class="sp-card rise d2" id="linkGroup" href="#" target="_blank" rel="noopener">
+      <div class="sp-ic tg">✈️</div>
+      <div class="sp-txt">
+        <b>Official Telegram Group</b>
+        <span>Announcements, payment proofs & community updates</span>
+      </div>
+      <div class="sp-go">›</div>
+    </a>
+
+    <a class="sp-card rise d2" id="linkSupport" href="#" target="_blank" rel="noopener">
+      <div class="sp-ic cs">💬</div>
+      <div class="sp-txt">
+        <b>Telegram Customer Service</b>
+        <span>Chat with support — deposits, withdrawals & account issues</span>
+      </div>
+      <div class="sp-go">›</div>
+    </a>
+
+    <a class="sp-card rise d3" id="linkWa" href="#" target="_blank" rel="noopener" style="display:none;">
+      <div class="sp-ic wa">📱</div>
+      <div class="sp-txt">
+        <b>WhatsApp Community</b>
+        <span>Chat with fellow farmers</span>
+      </div>
+      <div class="sp-go">›</div>
+    </a>
+
+    <div class="sp-note rise d3">
+      ⚠️ <b>Safety notice:</b> GFF staff will NEVER ask for your password or OTP.
+      Only use the official links on this page. Withdrawals are processed within 24 hours of approval.
+    </div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+
+      const { data: s } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
+      if (s) {
+        if (s.telegram_group_url) document.getElementById('linkGroup').href = s.telegram_group_url;
+        if (s.telegram_support_url) document.getElementById('linkSupport').href = s.telegram_support_url;
+        if (s.whatsapp_group_url) {
+          const wa = document.getElementById('linkWa');
+          wa.href = s.whatsapp_group_url;
+          wa.style.display = 'flex';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
