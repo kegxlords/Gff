@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Settings - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip on" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Gift Codes</h2>
+    <input class="adm-input" id="gcCode" placeholder="Code (e.g. GFF-NEWYEAR)" />
+    <input class="adm-input" id="gcValue" type="number" placeholder="Value in CFA (e.g. 2000)" />
+    <button class="adm-go" onclick="createCode()">+ Create Gift Code</button>
+    <div id="gcList"></div>
+
+    <h2 class="adm-title" style="font-size:16px;margin-top:24px;">Platform Tools</h2>
+    <button class="adm-go" onclick="runIncome()">🌙 Run Daily Income Now</button>
+    <input class="adm-input" id="newAdminEmail" placeholder="Email to grant admin..." style="margin-top:8px;" />
+    <button class="adm-go" onclick="makeAdmin()">👑 Grant Admin by Email</button>
+
+    <div class="adm-card" style="margin-top:16px;">
+      <div class="adm-name">ℹ️ Notes</div>
+      <div class="adm-sub">
+        • Daily income auto-runs nightly at 23:00 UTC via Vercel cron.<br>
+        • Deposit payment details are edited in <b>recharge.html</b>.<br>
+        • Withdrawal fee is fixed at 15% in <b>api/withdraw/create.js</b>.<br>
+        • Referral commission is fixed at 22% in <b>api/deposit/approve.js</b>.
+      </div>
+    </div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null;
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function createCode() {
+      const code = document.getElementById('gcCode').value.trim().toUpperCase();
+      const value = Number(document.getElementById('gcValue').value);
+      if (!code || !value) return AradelAuth.toast('Code and value required', 'error');
+      const { error } = await window.sb.from('gift_codes').insert({ code, value });
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Gift code created');
+      document.getElementById('gcCode').value = '';
+      document.getElementById('gcValue').value = '';
+      loadCodes();
+    }
+
+    async function delCode(id) {
+      if (!confirm('Delete this gift code?')) return;
+      await window.sb.from('gift_codes').delete().eq('id', id);
+      AradelAuth.toast('Code deleted');
+      loadCodes();
+    }
+
+    async function loadCodes() {
+      const { data: codes } = await window.sb.from('gift_codes').select('*').order('created_at', { ascending: false });
+      document.getElementById('gcList').innerHTML = (codes && codes.length) ? codes.map(c => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${c.code}</div>
+              <div class="adm-sub">${c.is_used ? '✅ Used' : '🔓 Unused'}${c.expires_at ? ' • Expires ' + new Date(c.expires_at).toLocaleDateString() : ''}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt gold">${fmt(c.value)}</div>
+              ${!c.is_used ? `<button class="adm-btn no" style="margin-top:6px;" onclick="delCode('${c.id}')">Delete</button>` : ''}
+            </div>
+          </div>
+        </div>`).join('') : '<div class="adm-empty">No gift codes yet.</div>';
+    }
+
+    async function runIncome() {
+      if (!confirm('Credit daily income to all active plans now?')) return;
+      const res = await fetch('/api/admin/daily-income', { headers: { 'Authorization': 'Bearer ' + SESSION.access_token } });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? `Credited ${d.credited} plans, ${d.completed} completed` : d.error, d.ok ? 'success' : 'error');
+    }
+
+    async function makeAdmin() {
+      const email = document.getElementById('newAdminEmail').value.trim().toLowerCase();
+      if (!email) return AradelAuth.toast('Enter an email', 'error');
+      if (!confirm('Grant admin to ' + email + '?')) return;
+      const { data, error } = await window.sb.from('users').update({ is_admin: true }).eq('email', email);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Admin granted (if the email exists)');
+      document.getElementById('newAdminEmail').value = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      loadCodes();
+    });
+  </script>
+</body>
+</html>
