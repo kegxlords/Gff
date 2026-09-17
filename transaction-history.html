@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Transaction History - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root { --pf-card: rgba(255,255,255,0.72); --pf-line: rgba(0,51,160,0.07); --pf-txt: #0E1B33; --pf-mut: #7A8699; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(180deg,#FFFBF0 0%,#FFF5E0 100%); background-attachment: fixed; font-family:'Inter',sans-serif; color:var(--pf-txt); margin:0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .tx-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
+    .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1{animation-delay:.05s;} .d2{animation-delay:.12s;}
+    .sec-head h2 { font-size:19px; font-weight:800; margin:0 0 14px; }
+    .tx-filters { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px; scrollbar-width:none; }
+    .tx-filters::-webkit-scrollbar { display:none; }
+    .tf-chip { flex-shrink:0; padding:8px 14px; border-radius:18px; background:var(--pf-card); border:1px solid var(--pf-line); font-size:11.5px; font-weight:700; color:var(--pf-mut); cursor:pointer; }
+    .tf-chip.on { background:linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); color:#fff; border-color:transparent; }
+    .tx-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; overflow:hidden; backdrop-filter:blur(10px); }
+    .tx-row { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid rgba(0,51,160,.05); }
+    .tx-row:last-child { border-bottom:none; }
+    .tx-ic { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .tx-ic.credit { background:rgba(34,139,34,.1); }
+    .tx-ic.debit { background:rgba(220,20,60,.08); }
+    .tx-mid { flex:1; min-width:0; }
+    .tx-desc { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tx-date { font-size:11px; color:var(--pf-mut); margin-top:2px; }
+    .tx-amt { font-weight:800; font-size:13.5px; }
+    .tx-amt.credit { color:var(--gff-green); }
+    .tx-amt.debit { color:var(--gff-red); }
+    .tx-empty { text-align:center; padding:36px 20px; color:var(--pf-mut); font-size:14px; background:var(--pf-card); border:2px dashed rgba(0,51,160,.12); border-radius:20px; }
+    #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="tx-wrap">
+    <div class="sec-head rise d1"><h2>Transaction History</h2></div>
+    <div class="tx-filters rise d1" id="txFilters">
+      <div class="tf-chip on" data-f="all">All</div>
+      <div class="tf-chip" data-f="deposit">Deposits</div>
+      <div class="tf-chip" data-f="withdrawal">Withdrawals</div>
+      <div class="tf-chip" data-f="daily_income">Daily Income</div>
+      <div class="tf-chip" data-f="investment">Investments</div>
+      <div class="tf-chip" data-f="referral_bonus">Referral</div>
+    </div>
+    <div id="txList" class="rise d2"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let TXS = [], FILTER = 'all';
+    const META = {
+      deposit: ['↓', 'credit'], withdrawal: ['↑', 'debit'], withdrawal_refund: ['↩', 'credit'],
+      daily_income: ['🌾', 'credit'], investment: ['📦', 'debit'],
+      referral_bonus: ['👥', 'credit'], gift_code: ['🎁', 'credit']
+    };
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    function render() {
+      const items = TXS.filter(t => FILTER === 'all' || t.type === FILTER || (FILTER === 'withdrawal' && t.type === 'withdrawal_refund'));
+      const list = document.getElementById('txList');
+      if (!items.length) { list.innerHTML = '<div class="tx-empty">No transactions found.</div>'; return; }
+      list.innerHTML = '<div class="tx-card">' + items.map(t => {
+        const m = META[t.type] || ['•', Number(t.amount) >= 0 ? 'credit' : 'debit'];
+        const credit = Number(t.amount) >= 0;
+        return `
+          <div class="tx-row">
+            <div class="tx-ic ${m[1]}">${m[0]}</div>
+            <div class="tx-mid">
+              <div class="tx-desc">${t.description || t.type}</div>
+              <div class="tx-date">${new Date(t.created_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+            <div class="tx-amt ${credit ? 'credit' : 'debit'}">${credit ? '+' : '−'}${fmt(Math.abs(t.amount))}</div>
+          </div>`;
+      }).join('') + '</div>';
+    }
+
+    document.getElementById('txFilters').addEventListener('click', e => {
+      const chip = e.target.closest('.tf-chip');
+      if (!chip) return;
+      document.querySelector('.tf-chip.on').classList.remove('on');
+      chip.classList.add('on');
+      FILTER = chip.dataset.f;
+      render();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      const { data: txs } = await window.sb.from('wallet_transactions').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(100);
+      TXS = txs || [];
+      render();
+    });
+  </script>
+</body>
+</html>
