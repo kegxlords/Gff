@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Deposits - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip on" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">Deposit Requests</h2>
+    <div class="adm-tabs">
+      <div class="adm-tab on" data-t="pending">Pending</div>
+      <div class="adm-tab" data-t="approved">Approved</div>
+      <div class="adm-tab" data-t="rejected">Rejected</div>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null, TAB = 'pending';
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function act(id, action) {
+      if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} this deposit? ${action === 'approve' ? 'Wallet will be credited + 22% referral paid.' : ''}`)) return;
+      const res = await fetch('/api/deposit/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+        body: JSON.stringify({ action, request_id: id })
+      });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? 'Deposit ' + action + 'd' : d.error, d.ok ? 'success' : 'error');
+      if (d.ok) load();
+    }
+
+    async function load() {
+      const { data: deps } = await window.sb.from('deposit_requests')
+        .select('*, users(full_name, email)').eq('status', TAB)
+        .order('created_at', { ascending: false }).limit(50);
+
+      const list = document.getElementById('list');
+      if (!deps || !deps.length) { list.innerHTML = '<div class="adm-empty">No ' + TAB + ' deposits.</div>'; return; }
+
+      list.innerHTML = deps.map(d => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${d.users?.full_name || 'User'}</div>
+              <div class="adm-sub">${d.users?.email || ''}<br>${d.method || ''} • Ref: ${d.reference || '—'}<br>${new Date(d.created_at).toLocaleString()}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt green">${fmt(d.amount)}</div>
+              <span class="adm-st ${d.status}">${d.status.toUpperCase()}</span>
+            </div>
+          </div>
+          ${TAB === 'pending' ? `
+          <div class="adm-actions">
+            <button class="adm-btn ok" onclick="act('${d.id}','approve')">✓ Approve</button>
+            <button class="adm-btn no" onclick="act('${d.id}','reject')">✕ Reject</button>
+          </div>` : (d.admin_note ? `<div class="adm-sub" style="margin-top:8px;">Note: ${d.admin_note}</div>` : '')}
+        </div>`).join('');
+    }
+
+    document.querySelector('.adm-tabs').addEventListener('click', e => {
+      const t = e.target.closest('.adm-tab');
+      if (!t) return;
+      document.querySelector('.adm-tab.on').classList.remove('on');
+      t.classList.add('on');
+      TAB = t.dataset.t;
+      load();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      load();
+    });
+  </script>
+</body>
+</html>
