@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0033A0" />
+  <title>Investment Packages - Green Farm Fortune</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <style>
+    :root {
+      --pf-card: rgba(255, 255, 255, 0.78);
+      --pf-line: rgba(0, 51, 160, 0.07);
+      --pf-txt: #0E1B33;
+      --pf-mut: #7A8699;
+    }
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      background: linear-gradient(180deg, #FFFBF0 0%, #FFF5E0 100%);
+      background-attachment: fixed;
+      font-family: 'Inter', sans-serif; color: var(--pf-txt);
+      margin: 0; padding-bottom: calc(96px + env(safe-area-inset-bottom));
+      -webkit-font-smoothing: antialiased;
+    }
+    .vip-wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .rise { opacity: 0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
+    .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; } .d3 { animation-delay: .19s; }
+
+    /* Hero */
+    .vip-hero {
+      background: linear-gradient(135deg, var(--gff-blue) 0%, var(--gff-blue-dark) 100%);
+      border-radius: 24px; padding: 24px; color: #fff;
+      position: relative; overflow: hidden; margin-bottom: 16px;
+      box-shadow: 0 12px 34px rgba(0, 51, 160, 0.28);
+    }
+    .vip-hero::after {
+      content: ''; position: absolute; top: -50px; right: -40px; width: 170px; height: 170px;
+      background: radial-gradient(circle, rgba(255,215,0,0.22) 0%, transparent 70%); border-radius: 50%;
+    }
+    .vip-hero h2 { font-family: 'Fraunces', serif; font-size: 22px; margin: 0 0 4px; }
+    .vip-hero p { font-size: 12.5px; opacity: .85; margin: 0 0 14px; }
+    .vip-balance {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
+      padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .vip-balance strong { color: var(--gff-gold); font-weight: 800; }
+
+    /* Sector filter chips */
+    .vip-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px; scrollbar-width: none; }
+    .vip-filters::-webkit-scrollbar { display: none; }
+    .f-chip {
+      flex-shrink: 0; padding: 8px 16px; border-radius: 20px;
+      background: var(--pf-card); border: 1px solid var(--pf-line);
+      font-size: 12px; font-weight: 700; color: var(--pf-mut); cursor: pointer;
+      transition: all .2s;
+    }
+    .f-chip.on {
+      background: linear-gradient(135deg, var(--gff-blue), var(--gff-blue-dark));
+      color: #fff; border-color: transparent;
+      box-shadow: 0 6px 16px rgba(0, 51, 160, 0.25);
+    }
+
+    /* Package cards */
+    .pkg-card {
+      background: var(--pf-card); border: 1px solid var(--pf-line);
+      border-radius: 20px; padding: 18px; margin-bottom: 14px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 20px rgba(0, 51, 160, 0.06);
+      transition: transform .18s ease;
+    }
+    .pkg-card:active { transform: scale(0.985); }
+    .pkg-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .pkg-badge {
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark); padding: 5px 12px; border-radius: 10px;
+      font-size: 11px; font-weight: 800; letter-spacing: .5px;
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.35);
+    }
+    .pkg-sector { font-size: 11px; font-weight: 600; color: var(--pf-mut); }
+    .pkg-amount {
+      font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800;
+      color: var(--gff-blue-dark); letter-spacing: -0.5px; margin-bottom: 12px;
+    }
+    .pkg-amount span { font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; color: var(--pf-mut); }
+    .pkg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .pkg-cell { background: rgba(0, 51, 160, 0.035); border-radius: 12px; padding: 10px 12px; }
+    .pkg-cell label { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .8px; color: var(--pf-mut); text-transform: uppercase; margin-bottom: 3px; }
+    .pkg-cell strong { font-size: 13.5px; font-weight: 800; color: var(--pf-txt); }
+    .pkg-cell strong.green { color: var(--gff-green); }
+    .pkg-cell strong.gold { color: var(--gff-gold-dark); }
+    .pkg-btn {
+      width: 100%; padding: 13px; border-radius: 14px; border: none;
+      font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+      transition: transform .18s ease;
+    }
+    .pkg-btn:active { transform: scale(0.97); }
+    .pkg-btn.buy {
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      color: var(--gff-blue-dark); box-shadow: 0 8px 20px rgba(255, 215, 0, 0.35);
+    }
+    .pkg-btn.locked {
+      background: rgba(0, 51, 160, 0.06); color: var(--pf-mut); cursor: not-allowed;
+    }
+    .pkg-btn.active-plan {
+      background: rgba(34, 139, 34, 0.10); color: var(--gff-green);
+      border: 1px solid rgba(34, 139, 34, 0.25);
+    }
+
+    /* Bottom sheet modal */
+    .sheet-overlay {
+      position: fixed; inset: 0; background: rgba(14, 27, 51, 0.45);
+      backdrop-filter: blur(4px); z-index: 900;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+    .sheet {
+      position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 100%);
+      width: 100%; max-width: 520px;
+      background: #fff; border-radius: 28px 28px 0 0;
+      padding: 14px 22px calc(28px + env(safe-area-inset-bottom));
+      transition: transform .35s cubic-bezier(.22,1,.36,1);
+    }
+    .sheet-overlay.show .sheet { transform: translate(-50%, 0); }
+    .sheet-handle { width: 44px; height: 4px; border-radius: 2px; background: #E5E7EB; margin: 0 auto 18px; }
+    .sheet-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; color: var(--gff-blue-dark); margin-bottom: 4px; }
+    .sheet-sub { font-size: 12px; color: var(--pf-mut); margin-bottom: 16px; }
+    .sheet-row {
+      display: flex; justify-content: space-between; padding: 11px 0;
+      border-bottom: 1px solid #F3F4F6; font-size: 13.5px;
+    }
+    .sheet-row span { color: var(--pf-mut); font-weight: 500; }
+    .sheet-row strong { font-weight: 800; color: var(--pf-txt); }
+    .sheet-row strong.green { color: var(--gff-green); }
+    .sheet-note {
+      margin: 14px 0 18px; font-size: 11.5px; color: var(--pf-mut);
+      background: rgba(34, 139, 34, 0.06); border: 1px solid rgba(34, 139, 34, 0.15);
+      padding: 10px 14px; border-radius: 12px; line-height: 1.5;
+    }
+    .sheet-actions { display: flex; gap: 10px; }
+    .sheet-cancel {
+      flex: 1; padding: 14px; border-radius: 14px; border: 1px solid var(--pf-line);
+      background: #F9FAFB; color: var(--pf-mut); font-weight: 700; font-family: inherit; font-size: 14px; cursor: pointer;
+    }
+    .sheet-confirm {
+      flex: 2; padding: 14px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, var(--gff-blue), var(--gff-blue-dark));
+      color: #fff; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 51, 160, 0.3);
+    }
+    .sheet-confirm:disabled { opacity: .6; cursor: not-allowed; }
+
+    #toast {
+      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+      background: var(--gff-blue-dark); color: #fff; padding: 12px 24px;
+      border-radius: 25px; font-size: 13px; font-weight: 700; z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+
+  <div class="vip-wrap">
+    <div class="vip-hero rise d1">
+      <h2>Investment Packages</h2>
+      <p>Plant today • Harvest daily • 30-day growth cycles</p>
+      <div class="vip-balance">Available: <strong id="vipBalance">0 CFA</strong></div>
+    </div>
+
+    <div class="vip-filters rise d2" id="filters">
+      <div class="f-chip on" data-sector="all">All</div>
+      <div class="f-chip" data-sector="Crop Farming">🌾 Crop</div>
+      <div class="f-chip" data-sector="Livestock Farming">🐄 Livestock</div>
+      <div class="f-chip" data-sector="Poultry Farming">🐔 Poultry</div>
+      <div class="f-chip" data-sector="Greenhouse & Horticulture">🏡 Greenhouse</div>
+    </div>
+
+    <div id="pkgList" class="rise d3"></div>
+  </div>
+
+  <!-- Purchase Bottom Sheet -->
+  <div class="sheet-overlay" id="sheetOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title" id="sheetTitle">VIP 1</div>
+      <div class="sheet-sub" id="sheetSector">Crop Farming</div>
+      <div class="sheet-row"><span>Investment Amount</span><strong id="sheetAmount">—</strong></div>
+      <div class="sheet-row"><span>Daily Income</span><strong class="green" id="sheetDaily">—</strong></div>
+      <div class="sheet-row"><span>Duration</span><strong id="sheetDuration">30 Days</strong></div>
+      <div class="sheet-row"><span>Total Return</span><strong id="sheetTotal">—</strong></div>
+      <div class="sheet-note">💡 Daily income is credited to your wallet automatically every night. Your VIP level upgrades instantly upon purchase.</div>
+      <div class="sheet-actions">
+        <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+        <button class="sheet-confirm" id="sheetConfirm">Confirm Investment</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let PRODUCTS = [], BALANCE = 0, ACTIVE_IDS = [], SELECTED = null, FILTER = 'all';
+
+    const EMOJI = { 'Crop Farming': '🌾', 'Livestock Farming': '🐄', 'Poultry Farming': '🐔', 'Greenhouse & Horticulture': '🏡', 'All Sectors': '' };
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    function render() {
+      const list = document.getElementById('pkgList');
+      const items = PRODUCTS.filter(p => FILTER === 'all' || p.sector === FILTER);
+
+      list.innerHTML = items.map(p => {
+        const total = p.daily_income * p.duration_days;
+        const roi = Math.round((total / p.amount) * 100);
+        const hasActive = ACTIVE_IDS.includes(p.id);
+        const canAfford = BALANCE >= p.amount;
+
+        let btn;
+        if (hasActive) {
+          btn = `<button class="pkg-btn active-plan" onclick="window.location.href='/investment'">✓ Active Plan — View Farm</button>`;
+        } else if (!canAfford) {
+          btn = `<button class="pkg-btn locked">Insufficient Balance — Deposit First</button>`;
+        } else {
+          btn = `<button class="pkg-btn buy" onclick="openSheet('${p.id}')">Invest Now</button>`;
+        }
+
+        return `
+          <div class="pkg-card">
+            <div class="pkg-top">
+              <span class="pkg-badge">${p.name}</span>
+              <span class="pkg-sector">${EMOJI[p.sector] || '🌱'} ${p.sector}</span>
+            </div>
+            <div class="pkg-amount">${fmt(p.amount)}</div>
+            <div class="pkg-grid">
+              <div class="pkg-cell"><label>Daily Income</label><strong class="green">${fmt(p.daily_income)}</strong></div>
+              <div class="pkg-cell"><label>Total Return</label><strong>${fmt(total)}</strong></div>
+              <div class="pkg-cell"><label>Duration</label><strong>${p.duration_days} Days</strong></div>
+              <div class="pkg-cell"><label>ROI</label><strong class="gold">${roi}%</strong></div>
+            </div>
+            ${btn}
+          </div>`;
+      }).join('');
+    }
+
+    function openSheet(id) {
+      SELECTED = PRODUCTS.find(p => p.id === id);
+      if (!SELECTED) return;
+      document.getElementById('sheetTitle').textContent = SELECTED.name;
+      document.getElementById('sheetSector').textContent = (EMOJI[SELECTED.sector] || '🌱') + ' ' + SELECTED.sector;
+      document.getElementById('sheetAmount').textContent = fmt(SELECTED.amount);
+      document.getElementById('sheetDaily').textContent = fmt(SELECTED.daily_income) + ' / day';
+      document.getElementById('sheetDuration').textContent = SELECTED.duration_days + ' Days';
+      document.getElementById('sheetTotal').textContent = fmt(SELECTED.daily_income * SELECTED.duration_days);
+      document.getElementById('sheetOverlay').classList.add('show');
+    }
+    function closeSheet() { document.getElementById('sheetOverlay').classList.remove('show'); }
+
+    document.getElementById('sheetConfirm').addEventListener('click', async function () {
+      if (!SELECTED) return;
+      const btn = this;
+      btn.disabled = true; btn.textContent = 'Planting...';
+      try {
+        const session = await AradelAuth.getSession();
+        const { data, error } = await window.sb.rpc('purchase_product', {
+          p_user_id: session.user.id,
+          p_product_id: SELECTED.id
+        });
+        if (error) throw new Error(error.message);
+        if (!data?.ok) throw new Error(data?.error || 'Purchase failed');
+        closeSheet();
+        AradelAuth.toast(' Investment successful!');
+        setTimeout(() => window.location.href = '/investment', 1200);
+      } catch (e) {
+        AradelAuth.toast(e.message, 'error');
+        btn.disabled = false; btn.textContent = 'Confirm Investment';
+      }
+    });
+
+    document.getElementById('filters').addEventListener('click', e => {
+      const chip = e.target.closest('.f-chip');
+      if (!chip) return;
+      document.querySelector('.f-chip.on').classList.remove('on');
+      chip.classList.add('on');
+      FILTER = chip.dataset.sector;
+      render();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      const session = await AradelAuth.getSession();
+      if (!session) { window.location.href = '/'; return; }
+      const uid = session.user.id;
+
+      const { data: wallet } = await window.sb.from('wallets').select('balance').eq('user_id', uid).single();
+      BALANCE = wallet ? Number(wallet.balance) : 0;
+      document.getElementById('vipBalance').textContent = fmt(BALANCE);
+
+      const { data: prods } = await window.sb.from('products').select('*').eq('is_active', true).order('amount', { ascending: true });
+      PRODUCTS = prods || [];
+
+      const { data: owned } = await window.sb.from('user_products').select('product_id').eq('user_id', uid).eq('status', 'active');
+      ACTIVE_IDS = (owned || []).map(o => o.product_id);
+
+      render();
+    });
+  </script>
+</body>
+</html>
