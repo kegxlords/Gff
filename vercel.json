@@ -23,7 +23,14 @@
     { "source": "/VIP", "destination": "/VIP.html" },
     { "source": "/transaction-history", "destination": "/transaction-history.html" },
     { "source": "/messages", "destination": "/messages.html" },
-    { "source": "/admin/(.*)", "destination": "/admin/$1.html" }
+    { "source": "/admin", "destination": "/admin/dashboard.html" },
+    { "source": "/admin/dashboard", "destination": "/admin/dashboard.html" },
+    { "source": "/admin/deposits", "destination": "/admin/deposits.html" },
+    { "source": "/admin/withdrawals", "destination": "/admin/withdrawals.html" },
+    { "source": "/admin/users", "destination": "/admin/users.html" },
+    { "source": "/admin/investments", "destination": "/admin/investments.html" },
+    { "source": "/admin/messages", "destination": "/admin/messages.html" },
+    { "source": "/admin/settings", "destination": "/admin/settings.html" }
   ],
   "headers": [
     {
