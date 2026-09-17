@@ -52,9 +52,9 @@
   <div id="app-header"></div>
   <div class="rf-wrap">
     <div class="rf-hero rise d1">
-      <div class="rf-pct">22%</div>
+      <div class="rf-pct" id="rfPct">22%</div>
       <h2>Refer & Earn Commission</h2>
-      <p>Earn 22% of every deposit your referrals make</p>
+      <p id="rfHeroSub">Earn 22% of every deposit your referrals make</p>
       <div class="rf-codebox">
         <label>Your Referral Code</label>
         <div class="rf-code-row">
@@ -80,7 +80,7 @@
       <h3>How It Works</h3>
       <div class="rf-step"><div class="rf-num">1</div><div><b>Share your code</b><p>Friends register with your referral code or link.</p></div></div>
       <div class="rf-step"><div class="rf-num">2</div><div><b>They deposit</b><p>When your referral's deposit is approved by admin.</p></div></div>
-      <div class="rf-step"><div class="rf-num">3</div><div><b>You earn 22%</b><p>Commission is credited to your wallet instantly — on every deposit they make.</p></div></div>
+      <div class="rf-step"><div class="rf-num">3</div><div><b id="rfStep3">You earn 22%</b><p>Commission is credited to your wallet instantly — on every deposit they make.</p></div></div>
     </div>
   </div>
   <div id="app-footer"></div>
@@ -111,6 +111,14 @@
       LINK = location.origin + '/register?ref=' + CODE;
       document.getElementById('rfCode').textContent = CODE;
 
+      // Dynamic bonus % from platform settings
+      const { data: st } = await window.sb.from('platform_settings').select('referral_bonus_percent').eq('id', 1).single();
+      const pct = Number(st?.referral_bonus_percent || 22);
+      document.getElementById('rfPct').textContent = pct + '%';
+      document.getElementById('rfHeroSub').textContent = 'Earn ' + pct + '% of every deposit your referrals make';
+      document.getElementById('rfStep3').textContent = 'You earn ' + pct + '%';
+
+      // Commission stats
       const res = await fetch('/api/team/commission', {
         headers: { 'Authorization': 'Bearer ' + session.access_token }
       });
