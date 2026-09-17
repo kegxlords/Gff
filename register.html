@@ -81,6 +81,15 @@
         btn.textContent = 'Create Account';
       }
     });
+    
+    // Pre-fill referral code from ?ref=CODE links
+    (function () {
+      const ref = new URLSearchParams(location.search).get('ref');
+      if (ref) {
+        const el = document.getElementById('referral_code');
+        if (el) el.value = ref;
+      }
+    })();
   </script>
 </body>
 </html>
