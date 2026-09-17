@@ -3,71 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#040A1C" />
+  <meta name="theme-color" content="#0033A0" />
   <title>My Profile - Green Farm Fortune</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <style>
     /* ============================================================
-       GFF PROFILE — DARK PREMIUM FINTECH
-       Flyer palette adapted for dark mode:
-       Blue #0033A0 → glow / #5B9BFF accent
-       Gold #FFD700 → premium highlights
-       Green #228B22 → #3DDC6A success accent
-       Red #DC143C → #FF4D6A danger accent
+       GFF PROFILE — LIGHT PREMIUM (matches dashboard background)
        ============================================================ */
     :root {
-      --px-bg: #040A1C;
-      --px-glass: rgba(255, 255, 255, 0.045);
-      --px-glass-2: rgba(255, 255, 255, 0.07);
-      --px-line: rgba(255, 255, 255, 0.08);
-      --px-txt: #F2F5FA;
-      --px-mut: #8A94A8;
-      --px-blue: #5B9BFF;
-      --px-gold: #FFD700;
-      --px-green: #3DDC6A;
-      --px-red: #FF4D6A;
+      --pf-card: rgba(255, 255, 255, 0.78);
+      --pf-line: rgba(0, 51, 160, 0.07);
+      --pf-txt: #0E1B33;
+      --pf-mut: #7A8699;
     }
 
     * { -webkit-tap-highlight-color: transparent; }
 
     body {
-      background: var(--px-bg);
-      background-image:
-        radial-gradient(620px 320px at 88% -60px, rgba(0, 51, 160, 0.45), transparent 62%),
-        radial-gradient(480px 260px at -12% 26%, rgba(255, 215, 0, 0.06), transparent 60%),
-        radial-gradient(420px 320px at 112% 72%, rgba(34, 139, 34, 0.12), transparent 62%);
+      /* SAME background as dashboard */
+      background: linear-gradient(180deg, #FFFBF0 0%, #FFF5E0 100%);
       background-attachment: fixed;
       font-family: 'Inter', sans-serif;
-      color: var(--px-txt);
+      color: var(--pf-txt);
       margin: 0;
       padding-bottom: calc(96px + env(safe-area-inset-bottom));
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Dark overrides for shared header & footer (this page only) */
-    .top-nav {
-      background: rgba(4, 10, 28, 0.78);
-      backdrop-filter: blur(22px) saturate(160%);
-      -webkit-backdrop-filter: blur(22px) saturate(160%);
-      border-bottom: 1px solid var(--px-line);
-      box-shadow: none;
-    }
-    .bottom-nav {
-      background: rgba(4, 10, 28, 0.86);
-      backdrop-filter: blur(22px) saturate(160%);
-      -webkit-backdrop-filter: blur(22px) saturate(160%);
-      border-top: 1px solid var(--px-line);
-      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
-    }
-    .bottom-nav .nav-link { color: rgba(255, 255, 255, 0.42); }
-    .bottom-nav .nav-link.active { color: var(--px-gold); background: rgba(255, 215, 0, 0.09); }
-    .bottom-nav .nav-link.active svg { stroke: var(--px-gold); }
-
     .pxl {
       max-width: 520px;
       margin: 0 auto;
-      padding: 28px 20px 20px;
+      padding: 24px 20px 20px;
     }
 
     /* Entrance animation */
@@ -78,197 +45,201 @@
     .d7 { animation-delay: .47s; } .d8 { animation-delay: .54s; }
 
     /* ============ IDENTITY BLOCK ============ */
-    .id-block { text-align: center; margin-bottom: 26px; }
+    .id-block { text-align: center; margin-bottom: 24px; }
     .avatar-ring {
       width: 92px; height: 92px;
       margin: 0 auto 14px;
       border-radius: 50%;
       padding: 3px;
-      background: conic-gradient(from 0deg, var(--px-gold), #0033A0, #3DDC6A, var(--px-gold));
+      background: conic-gradient(from 0deg, var(--gff-gold), var(--gff-blue), var(--gff-green), var(--gff-gold));
       animation: ringSpin 7s linear infinite;
-      box-shadow: 0 0 34px rgba(255, 215, 0, 0.28);
+      box-shadow: 0 10px 30px rgba(0, 51, 160, 0.22);
     }
     @keyframes ringSpin { to { transform: rotate(360deg); } }
     .avatar-core {
       width: 100%; height: 100%;
       border-radius: 50%;
-      background: linear-gradient(160deg, #0A1633, #040A1C);
+      background: linear-gradient(160deg, var(--gff-blue), var(--gff-blue-dark));
       display: flex; align-items: center; justify-content: center;
       font-family: 'Fraunces', serif;
       font-size: 34px; font-weight: 800;
-      color: var(--px-gold);
+      color: var(--gff-gold);
       animation: ringSpin 7s linear infinite reverse;
     }
     .id-name {
       font-size: 23px; font-weight: 800; letter-spacing: -0.4px;
       display: flex; align-items: center; justify-content: center; gap: 7px;
+      color: var(--gff-blue-dark);
     }
     .id-verified {
       width: 18px; height: 18px; border-radius: 50%;
-      background: rgba(61, 220, 106, 0.16);
+      background: rgba(34, 139, 34, 0.12);
       display: inline-flex; align-items: center; justify-content: center;
     }
-    .id-verified svg { width: 11px; height: 11px; stroke: var(--px-green); stroke-width: 3; fill: none; }
-    .id-mail { font-size: 13px; color: var(--px-mut); margin-top: 4px; }
+    .id-verified svg { width: 11px; height: 11px; stroke: var(--gff-green); stroke-width: 3; fill: none; }
+    .id-mail { font-size: 13px; color: var(--pf-mut); margin-top: 4px; }
     .chip-row { display: flex; justify-content: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
     .chip {
       padding: 6px 14px; border-radius: 20px;
       font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
-      border: 1px solid var(--px-line);
-      background: var(--px-glass);
-      color: var(--px-txt);
+      border: 1px solid var(--pf-line);
+      background: var(--pf-card);
+      color: var(--pf-txt);
       backdrop-filter: blur(8px);
     }
     .chip.gold {
-      background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(212, 175, 55, 0.10));
-      border-color: rgba(255, 215, 0, 0.35);
-      color: var(--px-gold);
+      background: linear-gradient(135deg, var(--gff-gold), var(--gff-gold-dark));
+      border-color: transparent;
+      color: var(--gff-blue-dark);
+      box-shadow: 0 4px 14px rgba(255, 215, 0, 0.35);
     }
     .chip.green {
-      background: rgba(61, 220, 106, 0.10);
-      border-color: rgba(61, 220, 106, 0.30);
-      color: var(--px-green);
+      background: rgba(34, 139, 34, 0.08);
+      border-color: rgba(34, 139, 34, 0.25);
+      color: var(--gff-green);
     }
 
     /* Referral code bar */
     .ref-bar {
       margin-top: 16px;
       display: flex; align-items: center; justify-content: space-between;
-      background: var(--px-glass);
-      border: 1px solid var(--px-line);
+      background: var(--pf-card);
+      border: 1px solid var(--pf-line);
       border-radius: 16px;
       padding: 12px 16px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 16px rgba(0, 51, 160, 0.06);
     }
-    .ref-lbl { font-size: 10px; letter-spacing: 1.2px; color: var(--px-mut); font-weight: 700; }
+    .ref-lbl { font-size: 10px; letter-spacing: 1.2px; color: var(--pf-mut); font-weight: 700; }
     .ref-code {
       background: none; border: none; cursor: pointer;
       display: flex; align-items: center; gap: 8px;
       font-family: 'Inter', monospace;
       font-size: 14px; font-weight: 800; letter-spacing: 1.5px;
-      color: var(--px-gold);
+      color: var(--gff-blue);
       padding: 0;
     }
-    .ref-code svg { width: 15px; height: 15px; stroke: var(--px-mut); stroke-width: 2; fill: none; transition: stroke .2s; }
-    .ref-code:active svg { stroke: var(--px-gold); }
+    .ref-code svg { width: 15px; height: 15px; stroke: var(--pf-mut); stroke-width: 2; fill: none; transition: stroke .2s; }
+    .ref-code:active svg { stroke: var(--gff-gold-dark); }
 
     /* ============ STATS GLASS ============ */
     .stat-glass {
       display: grid; grid-template-columns: 1fr 1fr 1fr;
-      background: var(--px-glass);
-      border: 1px solid var(--px-line);
+      background: var(--pf-card);
+      border: 1px solid var(--pf-line);
       border-radius: 20px;
       padding: 16px 6px;
-      margin-bottom: 28px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      margin-bottom: 26px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 20px rgba(0, 51, 160, 0.06);
     }
     .sg-cell { text-align: center; position: relative; }
     .sg-cell + .sg-cell::before {
       content: ''; position: absolute; left: 0; top: 15%; bottom: 15%;
-      width: 1px; background: var(--px-line);
+      width: 1px; background: var(--pf-line);
     }
     .sg-val {
       font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
       font-feature-settings: 'tnum';
     }
-    .sg-val.white { color: var(--px-txt); }
-    .sg-val.green { color: var(--px-green); }
-    .sg-val.gold { color: var(--px-gold); }
-    .sg-lbl { font-size: 9.5px; letter-spacing: 1px; color: var(--px-mut); font-weight: 700; margin-top: 4px; text-transform: uppercase; }
+    .sg-val.blue { color: var(--gff-blue); }
+    .sg-val.green { color: var(--gff-green); }
+    .sg-val.gold { color: var(--gff-gold-dark); }
+    .sg-lbl { font-size: 9.5px; letter-spacing: 1px; color: var(--pf-mut); font-weight: 700; margin-top: 4px; text-transform: uppercase; }
 
     /* ============ MENU ============ */
     .sec-lbl {
       font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px;
-      color: var(--px-mut); text-transform: uppercase;
+      color: var(--pf-mut); text-transform: uppercase;
       margin: 0 4px 10px;
       display: flex; align-items: center; gap: 8px;
     }
     .sec-lbl::before {
       content: ''; width: 14px; height: 2px; border-radius: 2px;
-      background: linear-gradient(90deg, var(--px-gold), transparent);
+      background: linear-gradient(90deg, var(--gff-gold-dark), transparent);
     }
     .menu-card {
-      background: var(--px-glass);
-      border: 1px solid var(--px-line);
+      background: var(--pf-card);
+      border: 1px solid var(--pf-line);
       border-radius: 20px;
       overflow: hidden;
-      margin-bottom: 26px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 20px rgba(0, 51, 160, 0.06);
     }
     .m-row {
       display: flex; align-items: center; gap: 13px;
       padding: 14px 16px;
       text-decoration: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(0, 51, 160, 0.05);
       transition: background .18s ease, transform .18s ease;
     }
     .m-row:last-child { border-bottom: none; }
-    .m-row:active { background: var(--px-glass-2); transform: scale(0.985); }
+    .m-row:active { background: rgba(0, 51, 160, 0.04); transform: scale(0.985); }
     .m-ic {
       width: 40px; height: 40px; border-radius: 13px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-      border: 1px solid transparent;
     }
     .m-ic svg { width: 19px; height: 19px; stroke-width: 2; fill: none; }
-    .i-blue  { background: rgba(0, 51, 160, 0.30); border-color: rgba(91, 155, 255, 0.25); } .i-blue svg  { stroke: var(--px-blue); }
-    .i-gold  { background: rgba(255, 215, 0, 0.10); border-color: rgba(255, 215, 0, 0.25); } .i-gold svg  { stroke: var(--px-gold); }
-    .i-green { background: rgba(34, 139, 34, 0.22); border-color: rgba(61, 220, 106, 0.25); } .i-green svg { stroke: var(--px-green); }
-    .i-red   { background: rgba(220, 20, 60, 0.20); border-color: rgba(255, 77, 106, 0.25); } .i-red svg   { stroke: var(--px-red); }
+    .i-blue  { background: #E8EEFB; } .i-blue svg  { stroke: var(--gff-blue); }
+    .i-gold  { background: #FFF8E1; } .i-gold svg  { stroke: var(--gff-gold-dark); }
+    .i-green { background: #E8F5E9; } .i-green svg { stroke: var(--gff-green); }
+    .i-red   { background: #FDE8EC; } .i-red svg   { stroke: var(--gff-red); }
     .m-txt { flex: 1; min-width: 0; }
-    .m-title { font-size: 14.5px; font-weight: 600; color: var(--px-txt); letter-spacing: -0.1px; }
-    .m-sub { font-size: 11px; color: var(--px-mut); margin-top: 2px; }
+    .m-title { font-size: 14.5px; font-weight: 600; color: var(--pf-txt); letter-spacing: -0.1px; }
+    .m-sub { font-size: 11px; color: var(--pf-mut); margin-top: 2px; }
     .m-chev svg {
-      width: 17px; height: 17px; stroke: rgba(255, 255, 255, 0.25);
+      width: 17px; height: 17px; stroke: #C4CAD4;
       stroke-width: 2; fill: none; transition: transform .18s ease, stroke .18s ease;
     }
-    .m-row:active .m-chev svg { transform: translateX(3px); stroke: var(--px-gold); }
+    .m-row:active .m-chev svg { transform: translateX(3px); stroke: var(--gff-gold-dark); }
     .m-count {
-      background: var(--px-red); color: #fff;
+      background: var(--gff-red); color: #fff;
       min-width: 20px; height: 20px; padding: 0 6px;
       border-radius: 10px; font-size: 11px; font-weight: 800;
       display: none; align-items: center; justify-content: center;
-      box-shadow: 0 0 12px rgba(255, 77, 106, 0.5);
+      box-shadow: 0 4px 12px rgba(220, 20, 60, 0.35);
     }
 
     /* ============ LOGOUT ============ */
     .logout-btn {
       width: 100%;
-      background: rgba(220, 20, 60, 0.14);
-      border: 1px solid rgba(255, 77, 106, 0.30);
-      color: var(--px-red);
+      background: linear-gradient(135deg, var(--gff-red), #B01030);
+      border: none;
+      color: #fff;
       border-radius: 18px;
       padding: 15px;
       font-size: 15px; font-weight: 800; letter-spacing: 0.2px;
       font-family: inherit; cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 9px;
-      transition: transform .18s ease, background .18s ease;
+      box-shadow: 0 10px 26px rgba(220, 20, 60, 0.28);
+      transition: transform .18s ease;
       margin-bottom: 18px;
     }
-    .logout-btn:active { transform: scale(0.98); background: rgba(220, 20, 60, 0.24); }
+    .logout-btn:active { transform: scale(0.98); }
     .logout-btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
 
     .foot-note {
-      text-align: center; font-size: 10.5px; color: rgba(138, 148, 168, 0.7);
+      text-align: center; font-size: 10.5px; color: #A8AEBA;
       letter-spacing: 0.6px; padding-bottom: 8px;
     }
-    .foot-note b { color: var(--px-gold); font-weight: 700; }
+    .foot-note b { color: var(--gff-gold-dark); font-weight: 700; }
 
     #toast {
       position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
-      background: rgba(10, 22, 51, 0.92); color: var(--px-gold);
-      border: 1px solid rgba(255, 215, 0, 0.3);
+      background: var(--gff-blue-dark); color: #fff;
       padding: 12px 24px; border-radius: 25px;
       font-size: 13px; font-weight: 700; z-index: 1000;
       opacity: 0; pointer-events: none; transition: opacity .3s;
-      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 33, 113, 0.3);
     }
     #toast.show { opacity: 1; }
   </style>
 </head>
 <body>
 
-  <!-- Shared Header -->
+  <!-- Shared Header (standard blue) -->
   <div id="app-header"></div>
 
   <div class="pxl">
@@ -297,7 +268,7 @@
     <!-- Stats -->
     <div class="stat-glass rise d2">
       <div class="sg-cell">
-        <div class="sg-val white" id="pfBalance">0 CFA</div>
+        <div class="sg-val blue" id="pfBalance">0 CFA</div>
         <div class="sg-lbl">Balance</div>
       </div>
       <div class="sg-cell">
@@ -415,7 +386,7 @@
     <div class="foot-note rise d8"><b>GREEN FARM FORTUNE</b> • GROW TODAY, HARVEST TOMORROW</div>
   </div>
 
-  <!-- Shared Footer -->
+  <!-- Shared Footer (standard premium nav) -->
   <div id="app-footer"></div>
 
   <div id="toast"></div>
@@ -457,7 +428,7 @@
         if (profile.created_at) {
           document.getElementById('pfSince').textContent = 'JOINED ' + new Date(profile.created_at).getFullYear();
         }
-        // Shared header
+        // Shared header values
         const nameEl = document.getElementById('headerUserName');
         const vipEl = document.getElementById('headerUserVip');
         if (nameEl) nameEl.textContent = profile.full_name.split(' ')[0];
