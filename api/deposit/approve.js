@@ -52,10 +52,13 @@ module.exports = async function handler(req, res) {
         description: 'Deposit approved (' + request.method + ')', balance_after: newBalance
       });
 
-      // 22% referral commission to upline
+      // Dynamic referral bonus from platform settings
+      const { data: settings } = await supabase.from('platform_settings').select('referral_bonus_percent').eq('id', 1).single();
+      const bonusPct = Number(settings?.referral_bonus_percent ?? 22);
+
       const { data: user } = await supabase.from('users').select('referred_by').eq('id', request.user_id).single();
       if (user?.referred_by) {
-        const commission = Math.round(amt * 0.22);
+        const commission = Math.round(amt * bonusPct / 100);
         const { data: rw } = await supabase.from('wallets').select('*').eq('user_id', user.referred_by).single();
         if (rw) {
           const rb = Number(rw.balance) + commission;
@@ -67,7 +70,7 @@ module.exports = async function handler(req, res) {
 
           await supabase.from('wallet_transactions').insert({
             user_id: user.referred_by, type: 'referral_bonus', amount: commission,
-            description: '22% commission on downline deposit', balance_after: rb
+            description: bonusPct + '% commission on downline deposit', balance_after: rb
           });
 
           const { data: existing } = await supabase.from('referrals')
@@ -88,6 +91,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(400).json({ error: 'Invalid action' });
   } catch (e) {
+    console.error('[deposit/approve] Error:', e);
     return res.status(500).json({ error: e.message });
   }
 };
