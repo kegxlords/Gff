@@ -2,10 +2,7 @@
   "version": 2,
   "outputDirectory": ".",
   "crons": [
-    {
-      "path": "/api/admin/daily-income",
-      "schedule": "0 23 * * *"
-    }
+    { "path": "/api/admin/daily-income", "schedule": "0 23 * * *" }
   ],
   "rewrites": [
     { "source": "/login", "destination": "/index.html" },
@@ -24,6 +21,7 @@
     { "source": "/transaction-history", "destination": "/transaction-history.html" },
     { "source": "/messages", "destination": "/messages.html" },
     { "source": "/support", "destination": "/support.html" },
+    { "source": "/payments/return", "destination": "/payments-return.html" },
     { "source": "/admin", "destination": "/admin/dashboard.html" },
     { "source": "/admin/dashboard", "destination": "/admin/dashboard.html" },
     { "source": "/admin/deposits", "destination": "/admin/deposits.html" },
@@ -31,7 +29,8 @@
     { "source": "/admin/users", "destination": "/admin/users.html" },
     { "source": "/admin/investments", "destination": "/admin/investments.html" },
     { "source": "/admin/messages", "destination": "/admin/messages.html" },
-    { "source": "/admin/settings", "destination": "/admin/settings.html" }
+    { "source": "/admin/settings", "destination": "/admin/settings.html" },
+    { "source": "/admin/payments", "destination": "/admin/payments.html" }
   ],
   "headers": [
     {
