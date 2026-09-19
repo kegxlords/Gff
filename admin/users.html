@@ -18,6 +18,7 @@
       <a class="adm-chip on" href="/admin/users">Users</a>
       <a class="adm-chip" href="/admin/investments">Investments</a>
       <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/payments">Gateway</a>
       <a class="adm-chip" href="/admin/settings">Settings</a>
     </nav>
 
@@ -44,6 +45,25 @@
       return s;
     }
 
+    // ---------- IMPERSONATION ----------
+    async function loginAs(email) {
+      if (!confirm('Open a NEW TAB logged in as ' + email + '?\n\nA gold "Return to Admin" pill will appear there to bring you back safely.')) return;
+      const s = await AradelAuth.getSession();
+      localStorage.setItem('gff_admin_backup', JSON.stringify({
+        access_token: s.access_token, refresh_token: s.refresh_token,
+        user_id: s.user.id, saved_at: Date.now()
+      }));
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.access_token },
+        body: JSON.stringify({ email })
+      });
+      const d = await res.json();
+      if (!d.ok) { localStorage.removeItem('gff_admin_backup'); return AradelAuth.toast(d.error, 'error'); }
+      window.open(d.action_link, '_blank');
+      AradelAuth.toast('Opened new tab as ' + (d.name || email));
+    }
+
     function render() {
       const q = (document.getElementById('search').value || '').toLowerCase();
       const items = USERS.filter(u =>
@@ -64,6 +84,7 @@
             </div>
           </div>
           <div class="adm-actions">
+            <button class="adm-btn plain" onclick="loginAs('${u.email}')">👑 Login As</button>
             <button class="adm-btn plain" onclick="adjust('${u.id}')">± Balance</button>
             <button class="adm-btn plain" onclick="toggleAdmin('${u.id}', ${!!u.is_admin})">${u.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
           </div>
@@ -78,7 +99,6 @@
       if (!delta || isNaN(delta)) return AradelAuth.toast('Invalid amount', 'error');
       const newBal = Number(u.wallet?.balance || 0) + delta;
       if (newBal < 0) return AradelAuth.toast('Balance cannot go negative', 'error');
-
       await window.sb.from('wallets').update({ balance: newBal, updated_at: new Date().toISOString() }).eq('user_id', uid);
       await window.sb.from('wallet_transactions').insert({
         user_id: uid, type: 'admin_adjust', amount: delta,
