@@ -52,16 +52,30 @@ function buildFundAccount(cc, r) {
   return fa;
 }
 
-// ---------- HTTP ----------
-async function post(path, body) {
-  const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => null);
-  return { status: res.status, data };
+// ---------- HTTP (15s hard timeout — never hang until Vercel kills us) ----------
+async function post(path, body, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+    const data = await res.json().catch(() => null);
+    return { status: res.status, data };
+  } catch (e) {
+    if (e.name === 'AbortError') { const err = new Error('OTPAY_TIMEOUT_15S'); err.timeout = true; throw err; }
+    throw e;
+  } finally { clearTimeout(timer); }
 }
-async function get(path) {
-  const res = await fetch(CFG.payUrl + path, { method: 'GET' });
-  const data = await res.json().catch(() => null);
-  return { status: res.status, data };
+async function get(path, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CFG.payUrl + path, { method: 'GET', signal: ctrl.signal });
+    const data = await res.json().catch(() => null);
+    return { status: res.status, data };
+  } catch (e) {
+    if (e.name === 'AbortError') { const err = new Error('OTPAY_TIMEOUT_15S'); err.timeout = true; throw err; }
+    throw e;
+  } finally { clearTimeout(timer); }
 }
 
 // ---------- CREDIT DEPOSIT (wallet + tx log + referral bonus) ----------
@@ -103,23 +117,30 @@ async function depositCreate(supabase, uid, b) {
 
   // Currency derived from country (server-side truth)
   const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
-  // remark = payment-method code (OTPay validates this strictly in live mode)
+  // remark = payment-method code (OTPay validates strictly in live mode)
   const method = b.operator || b.remark || (b.country_code === 'CM' ? 'mtn' : 'mobile');
 
   const id = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
   log('otpay.deposit-create', 'creating', { uid, amount: amt, cur, method, id });
 
-  const r = await post('/api/order/submit', {
-    merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: cur,
-    remark: method, sign: signCreate(id, amt), payType: 1,
-    notifyUrl: base + '/api/payments/otpay-callback', callbackUrl: base + '/payments/return',
-    firstName, lastName, mobile: b.mobile || '', email
-  });
+  let r;
+  try {
+    r = await post('/api/order/submit', {
+      merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: cur,
+      remark: method, sign: signCreate(id, amt), payType: 1,
+      notifyUrl: base + '/api/payments/otpay-callback', callbackUrl: base + '/payments/return',
+      firstName, lastName, mobile: b.mobile || '', email
+    });
+  } catch (e) {
+    log('otpay.deposit-create', e.timeout ? 'GATEWAY TIMEOUT 15s' : 'network error', { id, error: e.message });
+    return { status: 502, body: { ok: false, error: e.timeout ? 'Gateway did not respond in 15s — try again shortly' : 'Network error reaching gateway' } };
+  }
+  log('otpay.deposit-create', 'gateway response', { id, status: r.status, body: r.data });
 
-  if (r.status !== 200 || r.data?.code !== 0) {
-    log('otpay.deposit-create', 'rejected', r.data);
-    return { status: 502, body: { error: r.data?.error || 'Gateway error', raw: r.data } };
+  if (r.status !== 200 || !r.data || r.data.code !== 0) {
+    const errMsg = r.data?.error || r.data?.msg || 'Gateway error';
+    return { status: 502, body: { error: errMsg + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : ''), raw: r.data } };
   }
 
   await supabase.from('payment_transactions').insert({
@@ -137,8 +158,17 @@ async function depositQuery(supabase, uid, b) {
   if (!b.merchantOrderId) return { status: 400, body: { error: 'merchantOrderId required' } };
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', b.merchantOrderId).eq('user_id', uid).single();
   if (!tx) return { status: 404, body: { error: 'Order not found' } };
-  const r = await get(`/api/order/status?merchantId=${CFG.merchantId}&merchantOrderId=${encodeURIComponent(b.merchantOrderId)}`);
-  if (r.status !== 200 || r.data?.code !== 0) return { status: 502, body: { error: 'Gateway query failed' } };
+
+  let r;
+  try {
+    r = await get(`/api/order/status?merchantId=${CFG.merchantId}&merchantOrderId=${encodeURIComponent(b.merchantOrderId)}`);
+  } catch (e) {
+    return { status: 502, body: { error: e.timeout ? 'Gateway query timed out' : 'Gateway query network error' } };
+  }
+  if (r.status !== 200 || !r.data || r.data.code !== 0) {
+    return { status: 502, body: { error: (r.data?.error || 'Gateway query failed') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '') } };
+  }
+
   const q = r.data.data.status;
   let st = tx.status;
   if (tx.status === 'pending') {
@@ -197,14 +227,15 @@ async function withdrawCreate(supabase, uid, b) {
   try {
     r = await post('/api/payout/submit', { merchantId: CFG.merchantId, merchantOrderId: id, currency: cur, amount: fmtAmt(net), sign: signCreate(id, net), notifyUrl: base + '/api/payments/otpay-callback', fundAccount: fa });
   } catch (e) {
-    log('otpay.withdraw-create', 'ambiguous timeout', { id, error: e.message });
-    return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: 'Gateway timeout — resolves via query/callback' } };
+    log('otpay.withdraw-create', e.timeout ? 'GATEWAY TIMEOUT 15s' : 'network error', { id, error: e.message });
+    return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: e.timeout ? 'Gateway did not respond in 15s — check probe/whitelist' : 'Network error reaching gateway: ' + e.message } };
   }
+  log('otpay.withdraw-create', 'gateway response', { id, status: r.status, body: r.data });
 
   // Gateway rejected at creation (incl. HTTP-200 error bodies with code != 0)
   const codeBad = r.data && r.data.code !== undefined && Number(r.data.code) !== 0;
   if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
-    const errMsg = (r.data?.msg || 'Payout rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
+    const errMsg = (r.data?.error || r.data?.msg || 'Payout rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
     await supabase.from('payment_transactions').update({ status: 'failed', last_error: errMsg, updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
     await supabase.from('wallets').update({ balance: Number(wallet.balance), updated_at: new Date().toISOString() }).eq('user_id', uid);
     await supabase.from('wallet_transactions').insert({ user_id: uid, type: 'withdrawal_refund', amount: amt, description: 'OTPay payout rejected at creation — refund', balance_after: Number(wallet.balance) });
@@ -221,8 +252,17 @@ async function withdrawQuery(supabase, uid, b) {
   if (!b.merchantOrderId) return { status: 400, body: { error: 'merchantOrderId required' } };
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', b.merchantOrderId).eq('user_id', uid).single();
   if (!tx) return { status: 404, body: { error: 'Order not found' } };
-  const r = await get(`/api/payout/status?merchantId=${CFG.merchantId}&merchantOrderId=${encodeURIComponent(b.merchantOrderId)}`);
-  if (r.status !== 200) return { status: 502, body: { error: 'Gateway query failed' } };
+
+  let r;
+  try {
+    r = await get(`/api/payout/status?merchantId=${CFG.merchantId}&merchantOrderId=${encodeURIComponent(b.merchantOrderId)}`);
+  } catch (e) {
+    return { status: 502, body: { error: e.timeout ? 'Gateway query timed out' : 'Gateway query network error' } };
+  }
+  if (r.status !== 200) {
+    return { status: 502, body: { error: (r.data?.error || 'Gateway query failed') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '') } };
+  }
+
   const q = r.data?.data?.status ?? r.data?.status;
   let st = tx.status;
   if (tx.status === 'pending' || tx.status === 'processing') {
