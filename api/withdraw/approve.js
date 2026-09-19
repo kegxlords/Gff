@@ -1,4 +1,4 @@
-// api/withdraw/approve.js — admin approve = dispatch payout to OTPay
+// api/withdraw/approve.js — approve = dispatch to OTPay • reject = single guaranteed refund
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -41,12 +41,27 @@ async function adminCheck(supabase, req) {
   return profile?.is_admin ? data.user : null;
 }
 
-async function refund(supabase, userId, amount, desc) {
-  const { data: w } = await supabase.from('wallets').select('*').eq('user_id', userId).single();
-  if (!w) return;
-  const nb = Number(w.balance) + Number(amount);
-  await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', userId);
-  await supabase.from('wallet_transactions').insert({ user_id: userId, type: 'withdrawal_refund', amount: Number(amount), description: desc, balance_after: nb });
+// ============ SINGLE-WINNER REFUND ============
+// Atomically flips pending|approved -> rejected. If 0 rows flipped,
+// another path already settled this request -> NO refund (double-refund impossible).
+async function settleReject(supabase, requestId, adminNote, refundDescription) {
+  const { data: flipped } = await supabase.from('withdrawal_requests')
+    .update({ status: 'rejected', admin_note: adminNote })
+    .eq('id', requestId)
+    .in('status', ['pending', 'approved'])
+    .select();
+  if (!flipped || flipped.length === 0) return { refunded: false };
+
+  const request = flipped[0];
+  const { data: w } = await supabase.from('wallets').select('*').eq('user_id', request.user_id).single();
+  if (!w) return { refunded: false };
+  const nb = Number(w.balance) + Number(request.amount);
+  await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', request.user_id);
+  await supabase.from('wallet_transactions').insert({
+    user_id: request.user_id, type: 'withdrawal_refund', amount: Number(request.amount),
+    description: refundDescription || 'Withdrawal rejected — refund', balance_after: nb
+  });
+  return { refunded: true, amount: Number(request.amount) };
 }
 
 module.exports = async function handler(req, res) {
@@ -64,24 +79,41 @@ module.exports = async function handler(req, res) {
   try {
     const { action, request_id, admin_note } = req.body;
     const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', request_id).single();
-    if (!request || request.status !== 'pending') {
-      return res.status(400).json({ error: 'Request not found or already processed' });
-    }
+    if (!request) return res.status(400).json({ error: 'Request not found' });
 
-    // ================= REJECT (refund) =================
+    // ================= REJECT (secure, single refund) =================
     if (action === 'reject') {
-      await refund(supabase, request.user_id, request.amount, 'Withdrawal rejected by admin — refund');
-      await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: admin_note || '' }).eq('id', request_id);
-      return res.status(200).json({ ok: true, message: 'Rejected & refunded' });
+      if (request.status !== 'pending') {
+        return res.status(400).json({ error: `Request already ${request.status} — cannot reject twice` });
+      }
+
+      // IN-FLIGHT GUARD: never refund while a payout is alive at the gateway
+      const { data: linked } = await supabase.from('payment_transactions')
+        .select('id, status, merchant_order_id').eq('linked_request_id', request.id);
+      const inflight = (linked || []).find(x => ['pending', 'processing', 'successful'].includes(x.status));
+      if (inflight) {
+        return res.status(400).json({
+          error: `Cannot reject: payout ${inflight.merchant_order_id} is ${inflight.status.toUpperCase()} at the gateway. Resolve it in Gateway monitor first (failed payouts auto-refund).`
+        });
+      }
+
+      const settle = await settleReject(supabase, request.id, admin_note || 'Rejected by admin', 'Withdrawal rejected by admin — refund');
+      return res.status(200).json({
+        ok: true,
+        message: settle.refunded ? 'Rejected & refunded' : 'Already settled — no refund issued'
+      });
     }
 
     // ================= APPROVE (dispatch to OTPay) =================
     if (action === 'approve') {
+      if (request.status !== 'pending') {
+        return res.status(400).json({ error: `Request already ${request.status} — cannot approve twice` });
+      }
       if (!CFG.payUrl || !CFG.merchantId || !CFG.appSecret) {
         return res.status(500).json({ error: 'Gateway not configured (missing OTPAY env vars)' });
       }
 
-      // Double-dispatch guard: block completed forever, block fresh pending (<30 min), allow retry on old/failed
+      // Double-dispatch guard: completed = never again; fresh pending (<30min) = wait; old/failed = retry OK
       const { data: linked } = await supabase.from('payment_transactions')
         .select('id, status, merchant_order_id, created_at')
         .eq('linked_request_id', request.id)
@@ -96,7 +128,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: `Payout dispatched <30 min ago (${fresh.merchant_order_id}, ${fresh.status}) — wait for callback or retry later` });
       }
 
-      // Recipient data from bank card + settings
+      // Recipient data
       const { data: card } = await supabase.from('bank_cards').select('*').eq('id', request.bank_card_id).single();
       const { data: user } = await supabase.from('users').select('email').eq('id', request.user_id).single();
       const { data: settings } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
@@ -112,7 +144,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: `Payout account "${mobile}" is not a valid ${cc} mobile-money number. Update the user's bank account or reject & pay manually.` });
       }
 
-      const amt = Number(request.net_amount); // pay out the NET amount
+      const amt = Number(request.net_amount);
       const id = `wd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
       const extra = cc === 'CM' ? { type: operator } : (cc === 'TH' ? { type: 'BANK' } : {});
@@ -140,9 +172,10 @@ module.exports = async function handler(req, res) {
           notifyUrl: base + '/api/payments/otpay-callback', fundAccount
         });
       } catch (e) {
+        // Timeout ≠ failure: leave request PENDING + payout PENDING. No refund now.
         console.log('[withdraw/approve] GATEWAY TIMEOUT or NETWORK ERROR', { id, error: e.message, timeout: !!e.timeout });
-        await supabase.from('payment_transactions').update({ status: 'failed', last_error: e.timeout ? 'Gateway timeout' : 'Network error', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
-        return res.status(502).json({ error: e.timeout ? 'OTPay did not respond in 15s — try again shortly' : 'Network error reaching gateway: ' + e.message });
+        await supabase.from('payment_transactions').update({ status: 'failed', last_error: e.timeout ? 'Gateway timeout (status unknown)' : 'Network error', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
+        return res.status(502).json({ error: e.timeout ? 'OTPay did not respond in 15s — status unknown. Check Gateway monitor, then retry Approve or Reject.' : 'Network error reaching gateway: ' + e.message });
       }
       console.log('[withdraw/approve] gateway response', JSON.stringify({ status: r.status, body: r.data }));
 
@@ -151,9 +184,8 @@ module.exports = async function handler(req, res) {
       if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
         const errMsg = (r.data?.error || r.data?.msg || 'OTPay rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
         await supabase.from('payment_transactions').update({ status: 'failed', last_error: errMsg, updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
-        await refund(supabase, request.user_id, request.amount, 'OTPay rejected payout at creation — refund');
-        await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected: ' + errMsg }).eq('id', request_id);
-        return res.status(502).json({ error: 'OTPay rejected the payout: ' + errMsg + '. User refunded.' });
+        const settle = await settleReject(supabase, request.id, 'OTPay rejected: ' + errMsg, 'OTPay rejected payout at creation — refund');
+        return res.status(502).json({ error: 'OTPay rejected the payout: ' + errMsg + (settle.refunded ? '. User refunded.' : '. Already settled — no double refund.') });
       }
 
       // Dispatched successfully
