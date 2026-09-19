@@ -74,14 +74,19 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'Gateway not configured (missing OTPAY env vars)' });
       }
 
-      // Double-dispatch guard: don't pay twice if a payout already exists for this request
-      const { data: existing } = await supabase.from('payment_transactions')
-        .select('id, status, merchant_order_id')
+      // Double-dispatch guard: block completed forever, block fresh pending (<30 min), allow retry on old/failed
+      const { data: linked } = await supabase.from('payment_transactions')
+        .select('id, status, merchant_order_id, created_at')
         .eq('linked_request_id', request.id)
-        .in('status', ['pending', 'processing', 'successful'])
-        .maybeSingle();
-      if (existing) {
-        return res.status(400).json({ error: `Payout already dispatched (${existing.status}) — see Gateway monitor: ${existing.merchant_order_id}` });
+        .order('created_at', { ascending: false });
+      const rows = linked || [];
+      const completed = rows.find(x => x.status === 'successful');
+      if (completed) {
+        return res.status(400).json({ error: `Payout already COMPLETED for this request (${completed.merchant_order_id})` });
+      }
+      const fresh = rows.find(x => (x.status === 'pending' || x.status === 'processing') && (Date.now() - new Date(x.created_at).getTime()) < 30 * 60 * 1000);
+      if (fresh) {
+        return res.status(400).json({ error: `Payout dispatched <30 min ago (${fresh.merchant_order_id}, ${fresh.status}) — wait for callback or retry later` });
       }
 
       // Recipient data from bank card + settings
@@ -119,18 +124,22 @@ module.exports = async function handler(req, res) {
         meta: { gross: Number(request.amount), fee: Number(request.fee_15percent), source: 'admin-approve' }
       });
 
+      console.log('[withdraw/approve] dispatching', JSON.stringify({ id, cc, mobile, amt, url: CFG.payUrl + '/api/payout/submit' }));
       const r = await post('/api/payout/submit', {
         merchantId: CFG.merchantId, merchantOrderId: id, currency: cinfo.currency,
         amount: fmtAmt(amt), sign: signCreate(id, amt),
         notifyUrl: base + '/api/payments/otpay-callback', fundAccount
       });
+      console.log('[withdraw/approve] gateway response', JSON.stringify({ status: r.status, body: r.data }));
 
-      // Gateway rejected at creation → refund + reject request
-      if (r.status !== 200 || r.data?.status === 2) {
-        await supabase.from('payment_transactions').update({ status: 'failed', last_error: r.data?.msg || 'otpay rejected', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
+      // Gateway rejected at creation (incl. HTTP-200 error bodies with code != 0)
+      const codeBad = r.data && r.data.code !== undefined && Number(r.data.code) !== 0;
+      if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
+        const errMsg = (r.data?.msg || 'OTPay rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
+        await supabase.from('payment_transactions').update({ status: 'failed', last_error: errMsg, updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
         await refund(supabase, request.user_id, request.amount, 'OTPay rejected payout at creation — refund');
-        await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected: ' + (r.data?.msg || 'gateway error') }).eq('id', request_id);
-        return res.status(502).json({ error: 'OTPay rejected the payout: ' + (r.data?.msg || 'gateway error') + '. User refunded.' });
+        await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected: ' + errMsg }).eq('id', request_id);
+        return res.status(502).json({ error: 'OTPay rejected the payout: ' + errMsg + '. User refunded.' });
       }
 
       // Dispatched successfully
