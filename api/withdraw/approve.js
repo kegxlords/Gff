@@ -19,10 +19,17 @@ const COUNTRY = {
   GH: { currency: 'GHS', re: /^233\d{9}$/ }
 };
 
-async function post(path, body) {
-  const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => null);
-  return { status: res.status, data };
+async function post(path, body, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+    const data = await res.json().catch(() => null);
+    return { status: res.status, data };
+  } catch (e) {
+    if (e.name === 'AbortError') { const err = new Error('OTPAY_TIMEOUT_15S'); err.timeout = true; throw err; }
+    throw e;
+  } finally { clearTimeout(timer); }
 }
 
 async function adminCheck(supabase, req) {
@@ -125,17 +132,24 @@ module.exports = async function handler(req, res) {
       });
 
       console.log('[withdraw/approve] dispatching', JSON.stringify({ id, cc, mobile, amt, url: CFG.payUrl + '/api/payout/submit' }));
-      const r = await post('/api/payout/submit', {
-        merchantId: CFG.merchantId, merchantOrderId: id, currency: cinfo.currency,
-        amount: fmtAmt(amt), sign: signCreate(id, amt),
-        notifyUrl: base + '/api/payments/otpay-callback', fundAccount
-      });
+      let r;
+      try {
+        r = await post('/api/payout/submit', {
+          merchantId: CFG.merchantId, merchantOrderId: id, currency: cinfo.currency,
+          amount: fmtAmt(amt), sign: signCreate(id, amt),
+          notifyUrl: base + '/api/payments/otpay-callback', fundAccount
+        });
+      } catch (e) {
+        console.log('[withdraw/approve] GATEWAY TIMEOUT or NETWORK ERROR', { id, error: e.message, timeout: !!e.timeout });
+        await supabase.from('payment_transactions').update({ status: 'failed', last_error: e.timeout ? 'Gateway timeout' : 'Network error', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
+        return res.status(502).json({ error: e.timeout ? 'OTPay did not respond in 15s — try again shortly' : 'Network error reaching gateway: ' + e.message });
+      }
       console.log('[withdraw/approve] gateway response', JSON.stringify({ status: r.status, body: r.data }));
 
       // Gateway rejected at creation (incl. HTTP-200 error bodies with code != 0)
       const codeBad = r.data && r.data.code !== undefined && Number(r.data.code) !== 0;
       if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
-        const errMsg = (r.data?.msg || 'OTPay rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
+        const errMsg = (r.data?.error || r.data?.msg || 'OTPay rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
         await supabase.from('payment_transactions').update({ status: 'failed', last_error: errMsg, updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
         await refund(supabase, request.user_id, request.amount, 'OTPay rejected payout at creation — refund');
         await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected: ' + errMsg }).eq('id', request_id);
