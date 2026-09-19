@@ -36,6 +36,28 @@
       <button class="adm-go" onclick="saveSettings()">💾 Save Settings</button>
     </div>
 
+<h2 class="adm-title" style="font-size:16px;margin-top:22px;">OTPay Gateway</h2>
+    <div class="adm-card">
+      <div class="adm-sub" style="margin-bottom:12px;">Active mode is controlled by the server env <b>OTPAY_MODE</b> (test/live). Use the switch below for an instant kill-switch without redeploying.</div>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Gateway Enabled</label>
+      <select class="adm-input" id="setOtpayEnabled">
+        <option value="true">✅ Enabled</option>
+        <option value="false">⛔ Disabled (kill-switch)</option>
+      </select>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Country</label>
+      <select class="adm-input" id="setOtpayCountry">
+        <option value="CM">🇲 Cameroon (XAF)</option>
+        <option value="CI">🇨🇮 Côte d'Ivoire (XOF)</option>
+        <option value="SN">🇸🇳 Senegal (XOF)</option>
+        <option value="NG">🇳🇬 Nigeria (NGN)</option>
+        <option value="GH">🇬🇭 Ghana (GHS)</option>
+      </select>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Currency</label>
+      <input class="adm-input" id="setOtpayCurrency" placeholder="XAF" />
+      <button class="adm-go" onclick="saveOtpay()">💾 Save Gateway Settings</button>
+    </div>
+
+    
     <h2 class="adm-title" style="font-size:16px;margin-top:22px;">Gift Codes</h2>
     <input class="adm-input" id="gcCode" placeholder="Code (e.g. GFF-NEWYEAR)" />
     <input class="adm-input" id="gcValue" type="number" placeholder="Value in CFA (e.g. 2000)" />
@@ -97,6 +119,9 @@
       document.getElementById('setTgGroup').value = s.telegram_group_url || '';
       document.getElementById('setTgSupport').value = s.telegram_support_url || '';
       document.getElementById('setWa').value = s.whatsapp_group_url || '';
+      document.getElementById('setOtpayEnabled').value = String(s.otpay_enabled !== false);
+      if (s.otpay_country) document.getElementById('setOtpayCountry').value = s.otpay_country;
+      document.getElementById('setOtpayCurrency').value = s.otpay_currency || 'XAF';
     }
 
     async function createCode() {
@@ -141,7 +166,16 @@
       const d = await res.json();
       AradelAuth.toast(d.ok ? `Credited ${d.credited} plans, ${d.completed} completed` : d.error, d.ok ? 'success' : 'error');
     }
-
+    async function saveOtpay() {
+      const payload = {
+        otpay_enabled: document.getElementById('setOtpayEnabled').value === 'true',
+        otpay_country: document.getElementById('setOtpayCountry').value,
+        otpay_currency: document.getElementById('setOtpayCurrency').value.trim() || 'XAF'
+      };
+      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Gateway settings saved');
+}
     async function makeAdmin() {
       const email = document.getElementById('newAdminEmail').value.trim().toLowerCase();
       if (!email) return AradelAuth.toast('Enter an email', 'error');
