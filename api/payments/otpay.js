@@ -7,10 +7,12 @@ const CFG = MODE === 'live'
   ? { payUrl: process.env.OTPAY_LIVE_PAY_URL, merchantId: process.env.OTPAY_LIVE_MERCHANT_ID, appSecret: process.env.OTPAY_LIVE_APP_SECRET }
   : { payUrl: process.env.OTPAY_TEST_PAY_URL, merchantId: process.env.OTPAY_TEST_MERCHANT_ID, appSecret: process.env.OTPAY_TEST_APP_SECRET };
 
+// ---------- SIGNING (MD5 lowercase, 2-decimal amounts) ----------
 const md5 = s => crypto.createHash('md5').update(s, 'utf8').digest('hex').toLowerCase();
 function fmtAmt(n) { const x = Number(n); if (!Number.isFinite(x) || x < 0) throw new Error('Invalid amount'); return x.toFixed(2); }
 const signCreate = (id, amt) => md5(`merchantId=${CFG.merchantId}&merchantOrderId=${id}&amount=${fmtAmt(amt)}&appSecret=${CFG.appSecret}`);
 
+// ---------- REDACTED LOGGER ----------
 const REDACT = ['appSecret', 'sign', 'mobile', 'email', 'accountNumber', 'idNumber', 'address'];
 function redact(o, d = 0) {
   if (d > 8) return '[redacted]';
@@ -22,6 +24,7 @@ function redact(o, d = 0) {
 }
 const log = (t, m, d) => console.log(`[${new Date().toISOString()}] [${t}] ${m}${d ? ' ' + JSON.stringify(redact(d)) : ''}`);
 
+// ---------- COUNTRY FORMATS ----------
 const COUNTRY = {
   CM: { currency: 'XAF', re: /^237\d{9}$/, extras: { type: 'orange' } },
   NG: { currency: 'NGN', re: /^234\d{10}$/, extras: null },
@@ -49,6 +52,7 @@ function buildFundAccount(cc, r) {
   return fa;
 }
 
+// ---------- HTTP ----------
 async function post(path, body) {
   const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => null);
@@ -60,6 +64,7 @@ async function get(path) {
   return { status: res.status, data };
 }
 
+// ---------- CREDIT DEPOSIT (wallet + tx log + referral bonus) ----------
 async function creditDeposit({ supabase, user_id, amount, provider_ref, description }) {
   const { data: wallet, error } = await supabase.from('wallets').select('*').eq('user_id', user_id).single();
   if (error) throw new Error('Wallet not found');
@@ -82,29 +87,47 @@ async function creditDeposit({ supabase, user_id, amount, provider_ref, descript
   return { newBalance: nb };
 }
 
+// ---------- DEPOSIT CREATE ----------
 async function depositCreate(supabase, uid, b) {
   const amt = Number(b.amount);
   if (!Number.isFinite(amt) || amt < 500) return { status: 400, body: { error: 'Minimum deposit is 500' } };
   if (b.country_code) { const v = validateMobile(b.country_code, b.mobile); if (!v.ok) return { status: 400, body: { error: v.error } }; }
+
+  // Email + name: from request, else from user profile (OTPay requires non-empty email)
+  const { data: prof } = await supabase.from('users').select('email, full_name').eq('id', uid).single();
+  const email = b.email || prof?.email || '';
+  if (!email) return { status: 400, body: { error: 'Email required — contact support' } };
+  const nameParts = (prof?.full_name || 'Customer GFF').trim().split(' ');
+  const firstName = b.firstName || nameParts[0] || 'Customer';
+  const lastName = b.lastName || nameParts.slice(1).join(' ') || 'GFF';
+
   const id = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
   log('otpay.deposit-create', 'creating', { uid, amount: amt, id });
+
   const r = await post('/api/order/submit', {
     merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: b.currency || 'XAF',
     remark: b.remark || 'GFF Deposit', sign: signCreate(id, amt), payType: 1,
     notifyUrl: base + '/api/payments/otpay-callback', callbackUrl: base + '/payments/return',
-    firstName: b.firstName || 'Customer', lastName: b.lastName || 'GFF', mobile: b.mobile || '', email: b.email || ''
+    firstName, lastName, mobile: b.mobile || '', email
   });
-  if (r.status !== 200 || r.data?.code !== 0) { log('otpay.deposit-create', 'rejected', r.data); return { status: 502, body: { error: r.data?.error || 'Gateway error' } }; }
+
+  if (r.status !== 200 || r.data?.code !== 0) {
+    log('otpay.deposit-create', 'rejected', r.data);
+    return { status: 502, body: { error: r.data?.error || 'Gateway error', raw: r.data } };
+  }
+
   await supabase.from('payment_transactions').insert({
     user_id: uid, kind: 'deposit', provider: 'otpay', mode: MODE, merchant_order_id: id,
     provider_order_id: String(r.data.data.orderId || ''), amount: amt, currency: b.currency || 'XAF',
-    status: 'pending', country_code: b.country_code, phone: b.mobile, email: b.email,
+    status: 'pending', country_code: b.country_code, phone: b.mobile, email,
     meta: { h5Url: r.data.data.h5Url, payType: r.data.data.payType }
   });
+
   return { status: 200, body: { ok: true, merchantOrderId: id, h5Url: r.data.data.h5Url, orderId: r.data.data.orderId } };
 }
 
+// ---------- DEPOSIT QUERY ----------
 async function depositQuery(supabase, uid, b) {
   if (!b.merchantOrderId) return { status: 400, body: { error: 'merchantOrderId required' } };
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', b.merchantOrderId).eq('user_id', uid).single();
@@ -125,6 +148,7 @@ async function depositQuery(supabase, uid, b) {
   return { status: 200, body: { ok: true, status: st, gatewayStatus: q } };
 }
 
+// ---------- WITHDRAW CREATE (request + debit + fee + payout in one) ----------
 async function withdrawCreate(supabase, uid, b) {
   const amt = Number(b.amount);
   if (!Number.isFinite(amt) || amt < 1000) return { status: 400, body: { error: 'Minimum withdrawal is 1,000' } };
@@ -169,6 +193,7 @@ async function withdrawCreate(supabase, uid, b) {
     log('otpay.withdraw-create', 'ambiguous timeout', { id, error: e.message });
     return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: 'Gateway timeout — resolves via query/callback' } };
   }
+
   if (r.status !== 200 || r.data?.status === 2) {
     await supabase.from('payment_transactions').update({ status: 'failed', last_error: r.data?.msg || 'rejected', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
     await supabase.from('wallets').update({ balance: Number(wallet.balance), updated_at: new Date().toISOString() }).eq('user_id', uid);
@@ -176,10 +201,12 @@ async function withdrawCreate(supabase, uid, b) {
     await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected at creation' }).eq('id', reqRow.id);
     return { status: 502, body: { ok: false, error: r.data?.msg || 'Payout rejected', refunded: true } };
   }
+
   await supabase.from('payment_transactions').update({ provider_order_id: r.data?.payoutId ? String(r.data.payoutId) : null, meta: { gross: amt, fee, otpayResponse: r.data } }).eq('merchant_order_id', id);
   return { status: 200, body: { ok: true, merchantOrderId: id, payoutId: r.data?.payoutId, status: r.data?.status, net, fee } };
 }
 
+// ---------- WITHDRAW QUERY ----------
 async function withdrawQuery(supabase, uid, b) {
   if (!b.merchantOrderId) return { status: 400, body: { error: 'merchantOrderId required' } };
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', b.merchantOrderId).eq('user_id', uid).single();
@@ -208,6 +235,7 @@ async function withdrawQuery(supabase, uid, b) {
   return { status: 200, body: { ok: true, status: st, gatewayStatus: q } };
 }
 
+// ---------- COUNTRY VALIDATE ----------
 function countryValidate(b) {
   const c = COUNTRY[b.country_code];
   if (!c) return { status: 400, body: { ok: false, error: `Unsupported country: ${b.country_code}` } };
@@ -216,6 +244,7 @@ function countryValidate(b) {
   return { status: 200, body: { ok: true, currency: c.currency, requiresExtras: c.extras ? Object.keys(c.extras) : [] } };
 }
 
+// ---------- HANDLER ----------
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
