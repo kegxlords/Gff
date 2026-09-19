@@ -19,20 +19,32 @@
     .bal-strip span { font-size:12px; opacity:.8; font-weight:600; }
     .bal-strip strong { display:block; font-family:'Fraunces',serif; font-size:24px; font-weight:800; margin-top:2px; }
     .bal-strip .fee-note { text-align:right; font-size:10.5px; opacity:.85; line-height:1.5; font-weight:600; }
+    .wd-tabs { display:flex; gap:8px; margin-bottom:16px; }
+    .wd-tab { flex:1; padding:12px; border-radius:14px; text-align:center; background:var(--pf-card); border:1px solid var(--pf-line); font-size:13px; font-weight:800; color:var(--pf-mut); cursor:pointer; }
+    .wd-tab.on { background:linear-gradient(135deg,var(--gff-red),#B01030); color:#fff; border-color:transparent; box-shadow:0 6px 16px rgba(220,20,60,.25); }
+    .wd-pane { display:none; } .wd-pane.on { display:block; }
     .pend-banner { background:#FFF8E1; border:1px solid rgba(212,175,55,.35); color:#B8860B; border-radius:14px; padding:12px 16px; font-size:12.5px; font-weight:700; margin-bottom:14px; display:none; }
     .sec-title { font-size:15px; font-weight:800; margin:0 0 12px; }
     .wd-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
     .wd-amt { background:var(--pf-card); border:2px solid var(--pf-line); border-radius:16px; padding:14px; text-align:center; cursor:pointer; transition:all .2s; backdrop-filter:blur(10px); }
     .wd-amt:active { transform:scale(.96); }
-    .wd-amt.sel { border-color:var(--gff-blue); background:rgba(0,51,160,.05); box-shadow:0 6px 16px rgba(0,51,160,.15); }
+    .wd-amt.sel { border-color:var(--gff-blue); background:rgba(0,51,160,.05); }
     .wd-amt.off { opacity:.45; cursor:not-allowed; }
     .wd-val { font-family:'Fraunces',serif; font-size:18px; font-weight:800; color:var(--gff-blue-dark); }
     .wd-net { font-size:10.5px; color:var(--gff-green); font-weight:700; margin-top:4px; }
-    .wd-amt.off .wd-net { color:var(--pf-mut); }
-    .bank-pick { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:16px; color:var(--pf-txt); }
+    .bank-pick,.f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
+    .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
+    .f-row { display:flex; gap:10px; } .f-row > * { flex:1; }
     .wd-go { width:100%; padding:15px; border:none; border-radius:16px; background:linear-gradient(135deg,var(--gff-red),#B01030); color:#fff; font-weight:800; font-family:inherit; font-size:15px; cursor:pointer; box-shadow:0 10px 24px rgba(220,20,60,.28); }
     .wd-go:disabled { opacity:.5; cursor:not-allowed; }
     .wd-note { font-size:11px; color:var(--pf-mut); text-align:center; margin-top:12px; line-height:1.6; }
+    .dep-row { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:16px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+    .dep-amt { font-weight:800; font-size:15px; }
+    .dep-sub { font-size:11px; color:var(--pf-mut); margin-top:3px; }
+    .st { padding:4px 10px; border-radius:10px; font-size:10px; font-weight:800; }
+    .st.pending,.st.processing { background:#FFF8E1; color:#B8860B; }
+    .st.approved,.st.successful { background:rgba(34,139,34,.1); color:var(--gff-green); }
+    .st.rejected,.st.failed { background:rgba(220,20,60,.08); color:var(--gff-red); }
     .sheet-overlay { position:fixed; inset:0; background:rgba(14,27,51,.45); backdrop-filter:blur(4px); z-index:900; opacity:0; pointer-events:none; transition:opacity .3s; }
     .sheet-overlay.show { opacity:1; pointer-events:auto; }
     .sheet { position:absolute; bottom:0; left:50%; transform:translate(-50%,100%); width:100%; max-width:520px; background:#fff; border-radius:28px 28px 0 0; padding:14px 22px calc(28px + env(safe-area-inset-bottom)); transition:transform .35s cubic-bezier(.22,1,.36,1); }
@@ -41,8 +53,7 @@
     .sheet-row { display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid #F3F4F6; font-size:13.5px; }
     .sheet-row span { color:var(--pf-mut); font-weight:500; }
     .sheet-row strong { font-weight:800; }
-    .sheet-row strong.green { color:var(--gff-green); }
-    .sheet-row strong.red { color:var(--gff-red); }
+    .sheet-row strong.green { color:var(--gff-green); } .sheet-row strong.red { color:var(--gff-red); }
     .sheet-actions { display:flex; gap:10px; margin-top:18px; }
     .sheet-cancel { flex:1; padding:14px; border-radius:14px; border:1px solid var(--pf-line); background:#F9FAFB; color:var(--pf-mut); font-weight:700; font-family:inherit; font-size:14px; cursor:pointer; }
     .sheet-confirm { flex:2; padding:14px; border-radius:14px; border:none; background:linear-gradient(135deg,var(--gff-red),#B01030); color:#fff; font-weight:800; font-family:inherit; font-size:14px; cursor:pointer; }
@@ -58,19 +69,57 @@
       <div><span>Available Balance</span><strong id="wdBalance">0 CFA</strong></div>
       <div class="fee-note" id="feeNote">15% charge<br>applies per withdrawal</div>
     </div>
+    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending. Please wait before requesting another.</div>
 
-    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending approval. Please wait before requesting another.</div>
+    <div class="wd-tabs rise d1">
+      <div class="wd-tab on" data-p="manual"> Manual (Admin)</div>
+      <div class="wd-tab" data-p="instant">⚡ Instant Payout</div>
+    </div>
 
-    <h3 class="sec-title rise d2">Choose Amount</h3>
-    <div class="wd-grid rise d2" id="wdGrid"></div>
+    <!-- ===== MANUAL PANE ===== -->
+    <div class="wd-pane on" id="pane-manual">
+      <h3 class="sec-title rise d2">Choose Amount</h3>
+      <div class="wd-grid rise d2" id="wdGrid"></div>
+      <h3 class="sec-title rise d3">Payout Account</h3>
+      <select class="bank-pick rise d3" id="bankPick"></select>
+      <button class="wd-go rise d3" id="wdGo" disabled onclick="openSheet()">Withdraw</button>
+      <div class="wd-note rise d3">Processed manually by admin within 24 hours.</div>
+    </div>
 
-    <h3 class="sec-title rise d3">Payout Account</h3>
-    <select class="bank-pick rise d3" id="bankPick"></select>
-
-    <button class="wd-go rise d3" id="wdGo" disabled onclick="openSheet()">Withdraw</button>
-    <div class="wd-note rise d3">Withdrawals are processed manually by admin within 24 hours.<br>Net amount = Amount − fee charge.</div>
+    <!-- ===== INSTANT PANE ===== -->
+    <div class="wd-pane" id="pane-instant">
+      <div class="form-card" style="background:var(--pf-card);border:1px solid var(--pf-line);border-radius:20px;padding:18px;margin-bottom:16px;">
+        <label class="f-lbl">Amount to Withdraw (CFA)</label>
+        <input class="f-inp" id="insAmount" type="number" min="1000" placeholder="e.g. 10000" oninput="insSummary()" />
+        <div class="f-row">
+          <div>
+            <label class="f-lbl">Country</label>
+            <select class="f-inp" id="insCountry" onchange="insCountryChanged()">
+              <option value="CM">🇨🇲 Cameroon</option>
+              <option value="CI">🇨🇮 Côte d'Ivoire</option>
+              <option value="SN">🇸🇳 Senegal</option>
+            </select>
+          </div>
+          <div id="opWrap">
+            <label class="f-lbl">Operator</label>
+            <select class="f-inp" id="insOperator"><option value="mtn">MTN MoMo</option><option value="orange">Orange Money</option></select>
+          </div>
+        </div>
+        <label class="f-lbl">Recipient Mobile Number</label>
+        <input class="f-inp" id="insPhone" placeholder="237XXXXXXXXX" inputmode="tel" />
+        <label class="f-lbl">Recipient Name (must match account)</label>
+        <input class="f-inp" id="insName" placeholder="Full name on account" />
+        <div class="sheet-row"><span>Fee (<span id="insFeePct">15</span>%)</span><strong class="red" id="insFee">—</strong></div>
+        <div class="sheet-row" style="border:none;"><span>Recipient Receives</span><strong class="green" id="insNet">—</strong></div>
+        <button class="wd-go" id="insBtn" onclick="instantWithdraw()">⚡ Withdraw Instantly</button>
+        <div class="wd-note">Funds arrive in minutes via OTPay. Failed payouts auto-refund.</div>
+      </div>
+      <h3 class="sec-title">Recent Payouts</h3>
+      <div id="insList"></div>
+    </div>
   </div>
 
+  <!-- Manual confirm sheet -->
   <div class="sheet-overlay" id="sheetOverlay">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -94,29 +143,29 @@
   <script src="/assets/js/components.js"></script>
   <script>
     const FIXED = [1000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
-    let UID = null, BALANCE = 0, BANKS = [], SELECTED_AMT = null, FEE_PCT = 15;
+    const HINTS = { CM: '237XXXXXXXXX', CI: '225XXXXXXXXX', SN: '221XXXXXXXXX' };
+    let UID = null, SESSION = null, BALANCE = 0, BANKS = [], SELECTED_AMT = null, FEE_PCT = 15;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
 
+    document.querySelector('.wd-tabs').addEventListener('click', e => {
+      const t = e.target.closest('.wd-tab'); if (!t) return;
+      document.querySelector('.wd-tab.on').classList.remove('on'); t.classList.add('on');
+      document.querySelectorAll('.wd-pane').forEach(p => p.classList.remove('on'));
+      document.getElementById('pane-' + t.dataset.p).classList.add('on');
+    });
+
+    // ===== MANUAL =====
     function renderGrid() {
       document.getElementById('wdGrid').innerHTML = FIXED.map(a => {
         const off = BALANCE < a;
         const net = Math.round(a * (100 - FEE_PCT) / 100);
-        return `
-          <div class="wd-amt ${off ? 'off' : ''} ${SELECTED_AMT === a ? 'sel' : ''}" onclick="${off ? '' : 'selectAmt(' + a + ')'}">
-            <div class="wd-val">${fmt(a)}</div>
-            <div class="wd-net">${off ? 'Insufficient' : 'Receive ' + fmt(net)}</div>
-          </div>`;
+        return `<div class="wd-amt ${off ? 'off' : ''} ${SELECTED_AMT === a ? 'sel' : ''}" onclick="${off ? '' : 'selectAmt(' + a + ')'}">
+          <div class="wd-val">${fmt(a)}</div><div class="wd-net">${off ? 'Insufficient' : 'Receive ' + fmt(net)}</div></div>`;
       }).join('');
       updateGo();
     }
-
     function selectAmt(a) { SELECTED_AMT = a; renderGrid(); }
-
-    function updateGo() {
-      const bankOk = BANKS.length > 0;
-      document.getElementById('wdGo').disabled = !(SELECTED_AMT && bankOk);
-    }
-
+    function updateGo() { document.getElementById('wdGo').disabled = !(SELECTED_AMT && BANKS.length); }
     function openSheet() {
       if (!SELECTED_AMT || !BANKS.length) return;
       const bank = BANKS.find(b => b.id === document.getElementById('bankPick').value) || BANKS[0];
@@ -128,43 +177,103 @@
       document.getElementById('sheetOverlay').classList.add('show');
     }
     function closeSheet() { document.getElementById('sheetOverlay').classList.remove('show'); }
-
     async function confirmWithdraw() {
       const btn = document.getElementById('sConfirm');
       btn.disabled = true; btn.textContent = 'Processing...';
       try {
         const res = await fetch('/api/withdraw/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: UID,
-            bank_card_id: document.getElementById('bankPick').value,
-            amount: SELECTED_AMT
-          })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: UID, bank_card_id: document.getElementById('bankPick').value, amount: SELECTED_AMT })
         });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error);
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.error);
         closeSheet();
         AradelAuth.toast('Withdrawal submitted for approval');
-        setTimeout(() => window.location.href = '/transaction-history', 1200);
+        setTimeout(() => location.href = '/transaction-history', 1200);
+      } catch (e) { AradelAuth.toast(e.message, 'error'); btn.disabled = false; btn.textContent = 'Confirm'; }
+    }
+
+    // ===== INSTANT =====
+    function insCountryChanged() {
+      const c = document.getElementById('insCountry').value;
+      document.getElementById('opWrap').style.display = c === 'CM' ? '' : 'none';
+      document.getElementById('insPhone').placeholder = HINTS[c] || '';
+    }
+    function insSummary() {
+      const amt = Number(document.getElementById('insAmount').value || 0);
+      const fee = Math.round(amt * FEE_PCT / 100);
+      document.getElementById('insFee').textContent = '− ' + fmt(fee);
+      document.getElementById('insNet').textContent = fmt(amt - fee);
+    }
+    async function instantWithdraw() {
+      const btn = document.getElementById('insBtn');
+      const amt = Number(document.getElementById('insAmount').value);
+      const country_code = document.getElementById('insCountry').value;
+      const mobile = document.getElementById('insPhone').value.trim();
+      const name = document.getElementById('insName').value.trim();
+      const operator = document.getElementById('insOperator').value;
+
+      if (!amt || amt < 1000) return AradelAuth.toast('Minimum withdrawal is 1,000 CFA', 'error');
+      if (amt > BALANCE) return AradelAuth.toast('Insufficient balance', 'error');
+      if (!mobile || !name) return AradelAuth.toast('Recipient mobile and name required', 'error');
+      if (!confirm(`Withdraw ${fmt(amt)} instantly to ${mobile}?`)) return;
+
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        const r = await fetch('/api/payments/otpay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+          body: JSON.stringify({
+            action: 'withdraw-create',
+            amount: amt, currency: 'XAF', country_code,
+            recipient: { name, mobile, operator, email: '' }
+          })
+        });
+        const d = await r.json();
+        if (!d.ok && d.ambiguous) {
+          AradelAuth.toast(' Submitted — confirming status, check history shortly');
+        } else if (!d.ok) {
+          throw new Error(d.error || 'Payout failed');
+        } else {
+          AradelAuth.toast('⚡ Payout submitted — arriving shortly!');
+        }
+        setTimeout(() => location.href = '/transaction-history', 1400);
       } catch (e) {
         AradelAuth.toast(e.message, 'error');
-        btn.disabled = false; btn.textContent = 'Confirm';
+        btn.disabled = false; btn.textContent = '⚡ Withdraw Instantly';
       }
+    }
+    async function loadPayouts() {
+      const { data: txs } = await window.sb.from('payment_transactions')
+        .select('*').eq('user_id', UID).eq('kind', 'payout')
+        .order('created_at', { ascending: false }).limit(6);
+      const list = document.getElementById('insList');
+      if (!txs || !txs.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:14px;">No payouts yet.</div>'; return; }
+      list.innerHTML = txs.map(t => `
+        <div class="dep-row">
+          <div><div class="dep-amt">${fmt(t.amount)}</div><div class="dep-sub">${t.country_code} • ${t.merchant_order_id}<br>${new Date(t.created_at).toLocaleString()}</div></div>
+          <span class="st ${t.status}">${t.status.toUpperCase()}</span>
+        </div>`).join('');
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
-      const session = await AradelAuth.getSession();
-      if (!session) { window.location.href = '/'; return; }
-      UID = session.user.id;
+      SESSION = await AradelAuth.getSession();
+      if (!SESSION) { location.href = '/'; return; }
+      UID = SESSION.user.id;
 
-      // Load dynamic fee from platform settings
-      const { data: st } = await window.sb.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
+      const { data: st } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
       if (st) {
         FEE_PCT = Number(st.withdrawal_fee_percent ?? 15);
         document.getElementById('feeNote').innerHTML = FEE_PCT + '% charge<br>applies per withdrawal';
         document.getElementById('sFeeLbl').textContent = FEE_PCT + '% Charge';
+        document.getElementById('insFeePct').textContent = FEE_PCT;
+        if (st.otpay_country) document.getElementById('insCountry').value = st.otpay_country;
+        if (!st.otpay_enabled) {
+          document.querySelector('[data-p="instant"]').textContent = '⚡ Gateway (Disabled)';
+          document.getElementById('pane-instant').innerHTML = '<div class="pend-banner" style="display:block">⚠️ Instant payouts are temporarily disabled by admin. Use Manual withdrawal.</div>';
+        }
       }
+      insCountryChanged();
 
       const { data: wallet } = await window.sb.from('wallets').select('balance').eq('user_id', UID).single();
       BALANCE = wallet ? Number(wallet.balance) : 0;
@@ -173,18 +282,16 @@
       const { data: banks } = await window.sb.from('bank_cards').select('*').eq('user_id', UID).order('is_default', { ascending: false });
       BANKS = banks || [];
       const pick = document.getElementById('bankPick');
-      if (!BANKS.length) {
-        pick.innerHTML = '<option value="">No bank account — add one first</option>';
-        setTimeout(() => { if (confirm('You need a bank account to withdraw. Add one now?')) window.location.href = '/bank'; }, 600);
-      } else {
-        pick.innerHTML = BANKS.map(b => `<option value="${b.id}">${b.bank_name} — ${b.account_name} (•••• ${b.account_number.slice(-4)})</option>`).join('');
-      }
+      pick.innerHTML = BANKS.length
+        ? BANKS.map(b => `<option value="${b.id}">${b.bank_name} — ${b.account_name} (•••• ${b.account_number.slice(-4)})</option>`).join('')
+        : '<option value="">No payout account — add one first</option>';
+      if (!BANKS.length) setTimeout(() => { if (confirm('Add a payout account now?')) location.href = '/bank'; }, 600);
 
       const { count } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('user_id', UID).eq('status', 'pending');
       if (count > 0) document.getElementById('pendBanner').style.display = 'block';
 
       pick.addEventListener('change', updateGo);
-      renderGrid();
+      renderGrid(); loadPayouts();
     });
   </script>
 </body>
