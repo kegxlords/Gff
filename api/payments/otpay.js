@@ -168,9 +168,10 @@ async function withdrawCreate(supabase, uid, b) {
   const net = amt - fee;
   const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
 
-  const { count: pend } = await supabase.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('kind', 'payout').in('status', ['pending', 'processing']);
-  if (pend > 0) return { status: 400, body: { error: 'You already have a pending payout' } };
-
+  const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { count: pend } = await supabase.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('kind', 'payout').in('status', ['pending', 'processing']).gte('created_at', since);
+  if (pend > 0) return { status: 400, body: { error: 'You already have a pending payout (wait ~30 min or contact support)' } };
+  
   const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', uid).single();
   if (!wallet || Number(wallet.balance) < amt) return { status: 400, body: { error: 'Insufficient balance' } };
 
