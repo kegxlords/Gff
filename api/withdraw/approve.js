@@ -1,4 +1,4 @@
-// api/withdraw/approve.js — approve = dispatch to OTPay • reject = single guaranteed refund
+// api/withdraw/approve.js — approve = dispatch payout to OTPay • reject = single guaranteed refund
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -42,8 +42,8 @@ async function adminCheck(supabase, req) {
 }
 
 // ============ SINGLE-WINNER REFUND ============
-// Atomically flips pending|approved -> rejected. If 0 rows flipped,
-// another path already settled this request -> NO refund (double-refund impossible).
+// Atomically flips pending|approved -> rejected. If 0 rows flipped, another path
+// already settled this request -> NO refund (double-refund impossible).
 async function settleReject(supabase, requestId, adminNote, refundDescription) {
   const { data: flipped } = await supabase.from('withdrawal_requests')
     .update({ status: 'rejected', admin_note: adminNote })
@@ -128,23 +128,26 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: `Payout dispatched <30 min ago (${fresh.merchant_order_id}, ${fresh.status}) — wait for callback or retry later` });
       }
 
-      // Recipient data
-      const { data: card } = await supabase.from('bank_cards').select('*').eq('id', request.bank_card_id).single();
+      // Recipient data: prefer details captured on the request; fall back to saved bank card (legacy)
+      const { data: card } = request.bank_card_id
+        ? await supabase.from('bank_cards').select('*').eq('id', request.bank_card_id).single()
+        : { data: null };
       const { data: user } = await supabase.from('users').select('email').eq('id', request.user_id).single();
       const { data: settings } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
 
-      const cc = settings?.otpay_country || 'CM';
+      const cc = request.country_code || settings?.otpay_country || 'CM';
       const cinfo = COUNTRY[cc] || COUNTRY.CM;
       const bankName = (card?.bank_name || '').toUpperCase();
-      const operator = bankName.includes('ORANGE') ? 'orange' : bankName.includes('MTN') ? 'mtn' : (cc === 'CM' ? 'mtn' : cc.toLowerCase());
-      const mobile = (card?.account_number || '').replace(/\s/g, '');
-      const name = card?.account_name || 'Recipient';
+      const operator = request.operator
+        || (bankName.includes('ORANGE') ? 'orange' : bankName.includes('MTN') ? 'mtn' : (cc === 'CM' ? 'mtn' : cc.toLowerCase()));
+      const mobile = (request.recipient_mobile || card?.account_number || '').replace(/\s/g, '');
+      const name = request.recipient_name || card?.account_name || 'Recipient';
 
       if (!cinfo.re.test(mobile)) {
-        return res.status(400).json({ error: `Payout account "${mobile}" is not a valid ${cc} mobile-money number. Update the user's bank account or reject & pay manually.` });
+        return res.status(400).json({ error: `Payout account "${mobile}" is not a valid ${cc} mobile-money number. Edit the request recipient or reject & pay manually.` });
       }
 
-      const amt = Number(request.net_amount);
+      const amt = Number(request.net_amount); // pay out the NET amount
       const id = `wd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
       const extra = cc === 'CM' ? { type: operator } : (cc === 'TH' ? { type: 'BANK' } : {});
