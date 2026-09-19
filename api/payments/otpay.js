@@ -101,13 +101,18 @@ async function depositCreate(supabase, uid, b) {
   const firstName = b.firstName || nameParts[0] || 'Customer';
   const lastName = b.lastName || nameParts.slice(1).join(' ') || 'GFF';
 
+  // Currency derived from country (server-side truth)
+  const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
+  // remark = payment-method code (OTPay validates this strictly in live mode)
+  const method = b.operator || b.remark || (b.country_code === 'CM' ? 'mtn' : 'mobile');
+
   const id = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
-  log('otpay.deposit-create', 'creating', { uid, amount: amt, id });
+  log('otpay.deposit-create', 'creating', { uid, amount: amt, cur, method, id });
 
   const r = await post('/api/order/submit', {
-    merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: b.currency || 'XAF',
-    remark: b.remark || 'GFF Deposit', sign: signCreate(id, amt), payType: 1,
+    merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: cur,
+    remark: method, sign: signCreate(id, amt), payType: 1,
     notifyUrl: base + '/api/payments/otpay-callback', callbackUrl: base + '/payments/return',
     firstName, lastName, mobile: b.mobile || '', email
   });
@@ -119,8 +124,8 @@ async function depositCreate(supabase, uid, b) {
 
   await supabase.from('payment_transactions').insert({
     user_id: uid, kind: 'deposit', provider: 'otpay', mode: MODE, merchant_order_id: id,
-    provider_order_id: String(r.data.data.orderId || ''), amount: amt, currency: b.currency || 'XAF',
-    status: 'pending', country_code: b.country_code, phone: b.mobile, email,
+    provider_order_id: String(r.data.data.orderId || ''), amount: amt, currency: cur,
+    status: 'pending', country_code: b.country_code, operator: b.operator || null, phone: b.mobile, email,
     meta: { h5Url: r.data.data.h5Url, payType: r.data.data.payType }
   });
 
@@ -161,6 +166,7 @@ async function withdrawCreate(supabase, uid, b) {
   const feePct = Number(st?.withdrawal_fee_percent ?? 15);
   const fee = Math.round(amt * feePct / 100);
   const net = amt - fee;
+  const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
 
   const { count: pend } = await supabase.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('kind', 'payout').in('status', ['pending', 'processing']);
   if (pend > 0) return { status: 400, body: { error: 'You already have a pending payout' } };
@@ -181,14 +187,14 @@ async function withdrawCreate(supabase, uid, b) {
   await supabase.from('wallet_transactions').insert({ user_id: uid, type: 'withdrawal', amount: -amt, description: `OTPay payout (${net.toLocaleString()} net after ${feePct}% fee)`, balance_after: nb });
   await supabase.from('payment_transactions').insert({
     user_id: uid, kind: 'payout', provider: 'otpay', mode: MODE, merchant_order_id: id, amount: net,
-    currency: b.currency || 'XAF', status: 'pending', country_code: b.country_code, phone: b.recipient.mobile,
+    currency: cur, status: 'pending', country_code: b.country_code, phone: b.recipient.mobile,
     fund_account: fa, linked_request_id: reqRow.id, meta: { gross: amt, fee }
   });
 
-  log('otpay.withdraw-create', 'submitting', { uid, gross: amt, net, id });
+  log('otpay.withdraw-create', 'submitting', { uid, gross: amt, net, cur, id });
   let r;
   try {
-    r = await post('/api/payout/submit', { merchantId: CFG.merchantId, merchantOrderId: id, currency: b.currency || 'XAF', amount: fmtAmt(net), sign: signCreate(id, net), notifyUrl: base + '/api/payments/otpay-callback', fundAccount: fa });
+    r = await post('/api/payout/submit', { merchantId: CFG.merchantId, merchantOrderId: id, currency: cur, amount: fmtAmt(net), sign: signCreate(id, net), notifyUrl: base + '/api/payments/otpay-callback', fundAccount: fa });
   } catch (e) {
     log('otpay.withdraw-create', 'ambiguous timeout', { id, error: e.message });
     return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: 'Gateway timeout — resolves via query/callback' } };
