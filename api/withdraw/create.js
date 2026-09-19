@@ -1,6 +1,5 @@
+// api/withdraw/create.js — user submits withdrawal request (admin queue)
 const { createClient } = require('@supabase/supabase-js');
-
-const FIXED_AMOUNTS = [1000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,48 +11,59 @@ module.exports = async function handler(req, res) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { user_id, bank_card_id, amount } = req.body;
+    const { user_id, bank_card_id, amount, recipient_name, recipient_mobile, country_code, operator } = req.body || {};
     const amt = Number(amount);
 
-    if (!FIXED_AMOUNTS.includes(amt)) {
-      return res.status(400).json({ error: 'Invalid amount. Choose a fixed withdrawal amount.' });
-    }
+    if (!user_id) return res.status(400).json({ ok: false, error: 'User required' });
+    if (!Number.isFinite(amt) || amt < 1000) return res.status(400).json({ ok: false, error: 'Minimum withdrawal is 1,000' });
+    if (!recipient_name || !String(recipient_name).trim()) return res.status(400).json({ ok: false, error: 'Recipient name is required' });
+    if (!recipient_mobile || !String(recipient_mobile).trim()) return res.status(400).json({ ok: false, error: 'Recipient mobile number is required' });
 
-    // Dynamic withdrawal fee from platform settings
-    const { data: settings } = await supabase.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
-    const feePct = Number(settings?.withdrawal_fee_percent ?? 15);
-
-    const { data: card } = await supabase.from('bank_cards').select('*').eq('id', bank_card_id).eq('user_id', user_id).single();
-    if (!card) return res.status(400).json({ error: 'Add a bank account first' });
-
+    // One pending withdrawal at a time
     const { count } = await supabase.from('withdrawal_requests')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user_id).eq('status', 'pending');
-    if (count > 0) return res.status(400).json({ error: 'You already have a pending withdrawal' });
+    if (count > 0) return res.status(400).json({ ok: false, error: 'You already have a pending withdrawal request' });
 
+    // Balance check
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user_id).single();
     if (!wallet || Number(wallet.balance) < amt) {
-      return res.status(400).json({ error: 'Insufficient balance' });
+      return res.status(400).json({ ok: false, error: 'Insufficient balance' });
     }
 
+    // Dynamic fee from platform settings
+    const { data: settings } = await supabase.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
+    const feePct = Number(settings?.withdrawal_fee_percent ?? 15);
     const fee = Math.round(amt * feePct / 100);
     const net = amt - fee;
     const newBalance = Number(wallet.balance) - amt;
 
+    // Deduct immediately (refunded if rejected)
     await supabase.from('wallets').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', user_id);
 
-    await supabase.from('withdrawal_requests').insert({
-      user_id, bank_card_id, amount: amt, fee_15percent: fee, net_amount: net, status: 'pending'
+    // Create request WITH recipient details (bank card optional / legacy)
+    const { error } = await supabase.from('withdrawal_requests').insert({
+      user_id,
+      bank_card_id: bank_card_id || null,
+      amount: amt,
+      fee_15percent: fee,
+      net_amount: net,
+      status: 'pending',
+      recipient_name: String(recipient_name).trim(),
+      recipient_mobile: String(recipient_mobile).replace(/\s/g, ''),
+      country_code: country_code || 'CM',
+      operator: operator || null
     });
+    if (error) throw error;
 
     await supabase.from('wallet_transactions').insert({
       user_id, type: 'withdrawal', amount: -amt,
-      description: 'Withdrawal request (' + net.toLocaleString() + ' CFA net after ' + feePct + '% fee)',
+      description: `Withdrawal request to ${recipient_mobile} (${net.toLocaleString()} net after ${feePct}% fee)`,
       balance_after: newBalance
     });
 
-    return res.status(200).json({ ok: true, message: 'Withdrawal submitted for approval' });
+    return res.status(200).json({ ok: true, message: 'Withdrawal submitted for admin review' });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ ok: false, error: e.message });
   }
 };
