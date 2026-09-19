@@ -18,7 +18,7 @@
       <a class="adm-chip" href="/admin/users">Users</a>
       <a class="adm-chip" href="/admin/investments">Investments</a>
       <a class="adm-chip" href="/admin/messages">Messages</a>
-      <a class="adm-chip" href="/admin/payments">Payments</a>
+      <a class="adm-chip" href="/admin/payments">Gateway</a>
       <a class="adm-chip" href="/admin/settings">Settings</a>
     </nav>
 
@@ -37,6 +37,35 @@
 
     <h2 class="adm-title" style="font-size:16px;margin-top:20px;">Latest Requests</h2>
     <div id="recent"></div>
+
+    <!-- ================= PRODUCTS MANAGER ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:26px;display:flex;align-items:center;justify-content:space-between;">
+      📦 Products Manager
+      <button class="adm-btn plain" style="flex:0;padding:8px 14px;" onclick="toggleProdForm()">+ Add Product</button>
+    </h2>
+
+    <div class="adm-card" id="prodForm" style="display:none;">
+      <input class="adm-input" id="pName" placeholder="Package name (e.g. VIP 11)" />
+      <div style="display:flex;gap:8px;">
+        <input class="adm-input" id="pAmount" type="number" placeholder="Amount (CFA)" style="flex:1;" />
+        <input class="adm-input" id="pDaily" type="number" placeholder="Daily income" style="flex:1;" />
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input class="adm-input" id="pDays" type="number" placeholder="Duration (days)" value="30" style="flex:1;" />
+        <input class="adm-input" id="pVip" type="number" placeholder="VIP level req." value="1" style="flex:1;" />
+      </div>
+      <select class="adm-input" id="pSector">
+        <option>Crop Farming</option>
+        <option>Livestock Farming</option>
+        <option>Poultry Farming</option>
+        <option>Greenhouse & Horticulture</option>
+        <option>All Sectors</option>
+      </select>
+      <button class="adm-go" onclick="saveProduct()">💾 Save Product</button>
+      <button class="adm-btn plain" style="width:100%;" onclick="cancelEdit()">Cancel</button>
+    </div>
+
+    <div id="prodList"></div>
   </div>
   <div id="app-footer"></div>
   <div id="toast"></div>
@@ -46,7 +75,7 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
-    let SESSION = null;
+    let SESSION = null, PRODUCTS = [], EDITING = null;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
 
     async function adminGuard() {
@@ -59,13 +88,96 @@
 
     async function runIncome() {
       if (!confirm('Credit daily income to all active plans now?')) return;
-      const res = await fetch('/api/admin/daily-income', {
-        headers: { 'Authorization': 'Bearer ' + SESSION.access_token }
-      });
+      const res = await fetch('/api/admin/daily-income', { headers: { 'Authorization': 'Bearer ' + SESSION.access_token } });
       const d = await res.json();
       AradelAuth.toast(d.ok ? `Credited ${d.credited} plans, ${d.completed} completed` : d.error, d.ok ? 'success' : 'error');
     }
 
+    // ---------- PRODUCTS ----------
+    function toggleProdForm() {
+      const f = document.getElementById('prodForm');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    }
+    function cancelEdit() {
+      EDITING = null;
+      ['pName','pAmount','pDaily'].forEach(i => document.getElementById(i).value = '');
+      document.getElementById('pDays').value = 30;
+      document.getElementById('pVip').value = 1;
+      document.getElementById('prodForm').style.display = 'none';
+    }
+    function editProduct(id) {
+      const p = PRODUCTS.find(x => x.id === id);
+      if (!p) return;
+      EDITING = id;
+      document.getElementById('pName').value = p.name;
+      document.getElementById('pAmount').value = p.amount;
+      document.getElementById('pDaily').value = p.daily_income;
+      document.getElementById('pDays').value = p.duration_days;
+      document.getElementById('pVip').value = p.vip_level_required;
+      document.getElementById('pSector').value = p.sector;
+      document.getElementById('prodForm').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    async function saveProduct() {
+      const payload = {
+        name: document.getElementById('pName').value.trim(),
+        amount: Number(document.getElementById('pAmount').value),
+        daily_income: Number(document.getElementById('pDaily').value),
+        duration_days: Number(document.getElementById('pDays').value) || 30,
+        vip_level_required: Number(document.getElementById('pVip').value) || 0,
+        sector: document.getElementById('pSector').value
+      };
+      if (!payload.name || !payload.amount || !payload.daily_income) return AradelAuth.toast('Name, amount & daily income required', 'error');
+
+      let err;
+      if (EDITING) {
+        ({ error: err } = await window.sb.from('products').update(payload).eq('id', EDITING));
+      } else {
+        payload.is_active = true;
+        ({ error: err } = await window.sb.from('products').insert(payload));
+      }
+      if (err) return AradelAuth.toast(err.message, 'error');
+      AradelAuth.toast(EDITING ? 'Product updated' : 'Product created');
+      cancelEdit();
+      loadProducts();
+    }
+    async function toggleActive(id) {
+      const p = PRODUCTS.find(x => x.id === id);
+      await window.sb.from('products').update({ is_active: !p.is_active }).eq('id', id);
+      AradelAuth.toast(p.is_active ? 'Product hidden from users' : 'Product live');
+      loadProducts();
+    }
+    async function deleteProduct(id) {
+      if (!confirm('DELETE this product? Existing investments keep running, but users can no longer buy it.')) return;
+      const { error } = await window.sb.from('products').delete().eq('id', id);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Product deleted');
+      loadProducts();
+    }
+    async function loadProducts() {
+      const { data } = await window.sb.from('products').select('*').order('amount', { ascending: true });
+      PRODUCTS = data || [];
+      document.getElementById('prodList').innerHTML = PRODUCTS.length ? PRODUCTS.map(p => `
+        <div class="adm-card">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${p.name} ${p.is_active ? '' : '🚫'}</div>
+              <div class="adm-sub">${p.sector} • VIP ${p.vip_level_required}+ • ${p.duration_days} days</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt gold">${fmt(p.amount)}</div>
+              <div class="adm-sub">+${fmt(p.daily_income)}/day</div>
+            </div>
+          </div>
+          <div class="adm-actions">
+            <button class="adm-btn plain" onclick="editProduct('${p.id}')">✏️ Edit</button>
+            <button class="adm-btn ${p.is_active ? 'no' : 'ok'}" onclick="toggleActive('${p.id}')">${p.is_active ? '🚫 Hide' : '✅ Activate'}</button>
+            <button class="adm-btn no" onclick="deleteProduct('${p.id}')">🗑</button>
+          </div>
+        </div>`).join('') : '<div class="adm-empty">No products yet — add your first package.</div>';
+    }
+
+    // ---------- OVERVIEW ----------
     document.addEventListener('DOMContentLoaded', async function () {
       SESSION = await adminGuard();
       if (!SESSION) return;
@@ -73,7 +185,7 @@
       const { data: users } = await window.sb.from('users').select('id');
       const { data: wallets } = await window.sb.from('wallets').select('total_deposit');
       const { data: wds } = await window.sb.from('withdrawal_requests').select('amount').eq('status', 'approved');
-      const { data: active } = await window.sb.from('user_products').select('id', { count: 'exact', head: true }).eq('status', 'active');
+      const { count: active } = await window.sb.from('user_products').select('id', { count: 'exact', head: true }).eq('status', 'active');
       const { count: pendDep } = await window.sb.from('deposit_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       const { count: pendWd } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
 
@@ -86,7 +198,6 @@
 
       const { data: deps } = await window.sb.from('deposit_requests').select('*, users(full_name)').order('created_at', { ascending: false }).limit(5);
       const { data: wdl } = await window.sb.from('withdrawal_requests').select('*, users(full_name)').order('created_at', { ascending: false }).limit(5);
-
       const merged = [
         ...(deps || []).map(d => ({ t: 'deposit', ...d })),
         ...(wdl || []).map(w => ({ t: 'withdrawal', ...w }))
@@ -105,6 +216,8 @@
             </div>
           </div>
         </div>`).join('') : '<div class="adm-empty">No requests yet.</div>';
+
+      loadProducts();
     });
   </script>
 </body>
