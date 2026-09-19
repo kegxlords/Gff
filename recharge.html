@@ -15,7 +15,11 @@
     @keyframes rise { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:none;} }
     .rise { opacity:0; animation: rise .6s cubic-bezier(.22,1,.36,1) forwards; }
     .d1{animation-delay:.05s;} .d2{animation-delay:.12s;} .d3{animation-delay:.19s;}
-    .pay-card { background: linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); border-radius:22px; padding:20px; color:#fff; margin-bottom:18px; position:relative; overflow:hidden; box-shadow:0 12px 30px rgba(0,51,160,.25); }
+    .rc-tabs { display:flex; gap:8px; margin-bottom:16px; }
+    .rc-tab { flex:1; padding:12px; border-radius:14px; text-align:center; background:var(--pf-card); border:1px solid var(--pf-line); font-size:13px; font-weight:800; color:var(--pf-mut); cursor:pointer; }
+    .rc-tab.on { background:linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); color:#fff; border-color:transparent; box-shadow:0 6px 16px rgba(0,51,160,.25); }
+    .rc-pane { display:none; } .rc-pane.on { display:block; }
+    .pay-card { background: linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); border-radius:22px; padding:20px; color:#fff; margin-bottom:16px; position:relative; overflow:hidden; box-shadow:0 12px 30px rgba(0,51,160,.25); }
     .pay-card::after { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px; background:radial-gradient(circle,rgba(255,215,0,.2),transparent 70%); border-radius:50%; }
     .pay-title { font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; opacity:.85; margin-bottom:12px; }
     .pay-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.12); font-size:13.5px; position:relative; z-index:1; }
@@ -23,20 +27,24 @@
     .pay-row span { opacity:.75; }
     .pay-row strong { font-weight:800; display:flex; align-items:center; gap:8px; }
     .copy-mini { background:rgba(255,255,255,.15); border:none; color:var(--gff-gold); font-size:10px; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; font-family:inherit; }
-    .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:18px; backdrop-filter:blur(10px); }
+    .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:16px; backdrop-filter:blur(10px); }
     .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
     .f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
     .f-inp:focus { outline:none; border-color:var(--gff-blue); }
+    .f-row { display:flex; gap:10px; } .f-row > * { flex:1; }
     .f-save { width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--gff-gold),var(--gff-gold-dark)); color:var(--gff-blue-dark); font-weight:800; font-family:inherit; font-size:14px; cursor:pointer; box-shadow:0 8px 18px rgba(255,215,0,.3); }
-    .f-save:disabled { opacity:.6; }
+    .f-save.blue { background:linear-gradient(135deg,var(--gff-blue),var(--gff-blue-dark)); color:#fff; box-shadow:0 8px 18px rgba(0,51,160,.3); }
+    .f-save:disabled { opacity:.6; cursor:not-allowed; }
     .sec-title { font-size:15px; font-weight:800; margin:0 0 12px; }
     .dep-row { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:16px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
     .dep-amt { font-weight:800; font-size:15px; }
     .dep-sub { font-size:11px; color:var(--pf-mut); margin-top:3px; }
     .st { padding:4px 10px; border-radius:10px; font-size:10px; font-weight:800; }
-    .st.pending { background:#FFF8E1; color:#B8860B; }
-    .st.approved { background:rgba(34,139,34,.1); color:var(--gff-green); }
-    .st.rejected { background:rgba(220,20,60,.08); color:var(--gff-red); }
+    .st.pending,.st.processing { background:#FFF8E1; color:#B8860B; }
+    .st.approved,.st.paid,.st.successful { background:rgba(34,139,34,.1); color:var(--gff-green); }
+    .st.rejected,.st.failed { background:rgba(220,20,60,.08); color:var(--gff-red); }
+    .st.refunded { background:rgba(0,51,160,.08); color:var(--gff-blue); }
+    .gw-note { background:rgba(34,139,34,.06); border:1px solid rgba(34,139,34,.15); border-radius:14px; padding:12px 14px; font-size:11.5px; color:#1B6E1B; line-height:1.6; margin-bottom:16px; }
     #toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--gff-blue-dark); color:#fff; padding:12px 24px; border-radius:25px; font-size:13px; font-weight:700; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s; }
     #toast.show { opacity:1; }
   </style>
@@ -44,31 +52,60 @@
 <body>
   <div id="app-header"></div>
   <div class="rc-wrap">
-
-    <!-- Payment instructions (EDIT THESE DETAILS) -->
-    <div class="pay-card rise d1">
-      <div class="pay-title">Pay To / Send Funds To</div>
-      <div class="pay-row"><span>Bank</span><strong id="payBank">GFF Microfinance Bank</strong></div>
-      <div class="pay-row"><span>Account Number</span><strong><span id="payAcct">0001234567</span><button class="copy-mini" onclick="copyTxt('payAcct')">COPY</button></strong></div>
-      <div class="pay-row"><span>Account Name</span><strong>Green Farm Fortune</strong></div>
-      <div class="pay-row"><span>Mobile Money</span><strong><span id="payMomo">+237600000000</span><button class="copy-mini" onclick="copyTxt('payMomo')">COPY</button></strong></div>
+    <div class="rc-tabs rise d1">
+      <div class="rc-tab on" data-p="auto">⚡ Mobile Money (Instant)</div>
+      <div class="rc-tab" data-p="manual">🏦 Manual Deposit</div>
     </div>
 
-    <div class="form-card rise d2">
-      <label class="f-lbl">Amount (CFA) — min 1,000</label>
-      <input class="f-inp" id="depAmount" type="number" min="1000" placeholder="e.g. 10000" inputmode="numeric" />
-      <label class="f-lbl">Payment Method</label>
-      <select class="f-inp" id="depMethod">
-        <option>Bank Transfer</option>
-        <option>Mobile Money</option>
-      </select>
-      <label class="f-lbl">Transaction Reference / Sender Name</label>
-      <input class="f-inp" id="depRef" placeholder="e.g. TXN-8842 or sender phone" />
-      <button class="f-save" id="depBtn" onclick="submitDeposit()">Submit Deposit Request</button>
+    <!-- ===== OTPAY PANE ===== -->
+    <div class="rc-pane on" id="pane-auto">
+      <div class="gw-note rise d1">⚡ Pay with MTN MoMo / Orange Money. Your wallet credits <b>automatically</b> the moment payment confirms — no admin wait.</div>
+      <div class="form-card rise d2">
+        <label class="f-lbl">Amount (CFA) — min 500</label>
+        <input class="f-inp" id="autoAmount" type="number" min="500" placeholder="e.g. 10000" inputmode="numeric" />
+        <div class="f-row">
+          <div>
+            <label class="f-lbl">Country</label>
+            <select class="f-inp" id="autoCountry" onchange="updatePhoneHint()">
+              <option value="CM">🇨 Cameroon</option>
+              <option value="CI">🇨 Côte d'Ivoire</option>
+              <option value="SN">🇸🇳 Senegal</option>
+              <option value="NG">🇳🇬 Nigeria</option>
+              <option value="GH">🇬🇭 Ghana</option>
+            </select>
+          </div>
+          <div>
+            <label class="f-lbl">Mobile Number</label>
+            <input class="f-inp" id="autoPhone" placeholder="237XXXXXXXXX" inputmode="tel" />
+          </div>
+        </div>
+        <button class="f-save blue" id="autoBtn" onclick="payNow()">Pay with Mobile Money →</button>
+      </div>
+      <h3 class="sec-title rise d3">Recent Gateway Deposits</h3>
+      <div id="autoList" class="rise d3"></div>
     </div>
 
-    <h3 class="sec-title rise d3">My Deposit Requests</h3>
-    <div id="depList" class="rise d3"></div>
+    <!-- ===== MANUAL PANE ===== -->
+    <div class="rc-pane" id="pane-manual">
+      <div class="pay-card rise d1">
+        <div class="pay-title">Pay To / Send Funds To</div>
+        <div class="pay-row"><span>Bank</span><strong id="payBank">GFF Microfinance Bank</strong></div>
+        <div class="pay-row"><span>Account Number</span><strong><span id="payAcct">0001234567</span><button class="copy-mini" onclick="copyTxt('payAcct')">COPY</button></strong></div>
+        <div class="pay-row"><span>Account Name</span><strong>Green Farm Fortune</strong></div>
+        <div class="pay-row"><span>Mobile Money</span><strong><span id="payMomo">+237600000000</span><button class="copy-mini" onclick="copyTxt('payMomo')">COPY</button></strong></div>
+      </div>
+      <div class="form-card rise d2">
+        <label class="f-lbl">Amount (CFA) — min 1,000</label>
+        <input class="f-inp" id="depAmount" type="number" min="1000" placeholder="e.g. 10000" inputmode="numeric" />
+        <label class="f-lbl">Payment Method</label>
+        <select class="f-inp" id="depMethod"><option>Bank Transfer</option><option>Mobile Money</option></select>
+        <label class="f-lbl">Transaction Reference / Sender Name</label>
+        <input class="f-inp" id="depRef" placeholder="e.g. TXN-8842 or sender phone" />
+        <button class="f-save" id="depBtn" onclick="submitDeposit()">Submit Deposit Request</button>
+      </div>
+      <h3 class="sec-title rise d3">My Manual Requests</h3>
+      <div id="depList" class="rise d3"></div>
+    </div>
   </div>
   <div id="app-footer"></div>
   <div id="toast"></div>
@@ -78,58 +115,111 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
-    let UID = null;
+    let UID = null, SESSION = null, SETTINGS = null;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
+    const HINTS = { CM: '237XXXXXXXXX', CI: '225XXXXXXXXX', SN: '221XXXXXXXXX', NG: '234XXXXXXXXXX', GH: '233XXXXXXXXX' };
 
+    function updatePhoneHint() {
+      document.getElementById('autoPhone').placeholder = HINTS[document.getElementById('autoCountry').value] || '';
+    }
     function copyTxt(id) {
       const t = document.getElementById(id).textContent;
       navigator.clipboard ? navigator.clipboard.writeText(t).then(() => AradelAuth.toast('Copied')) : AradelAuth.toast(t);
     }
 
+    // Tabs
+    document.querySelector('.rc-tabs').addEventListener('click', e => {
+      const t = e.target.closest('.rc-tab'); if (!t) return;
+      document.querySelector('.rc-tab.on').classList.remove('on'); t.classList.add('on');
+      document.querySelectorAll('.rc-pane').forEach(p => p.classList.remove('on'));
+      document.getElementById('pane-' + t.dataset.p).classList.add('on');
+    });
+
+    // ===== OTPAY DEPOSIT (H5 redirect) =====
+    async function payNow() {
+      const btn = document.getElementById('autoBtn');
+      const amount = Number(document.getElementById('autoAmount').value);
+      const country_code = document.getElementById('autoCountry').value;
+      const mobile = document.getElementById('autoPhone').value.trim();
+      if (!amount || amount < 500) return AradelAuth.toast('Minimum deposit is 500 CFA', 'error');
+      if (!mobile) return AradelAuth.toast('Enter your mobile money number', 'error');
+
+      btn.disabled = true; btn.textContent = 'Creating order...';
+      try {
+        const res = await fetch('/api/payments/otpay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+          body: JSON.stringify({ action: 'deposit-create', amount, currency: SETTINGS?.otpay_currency || 'XAF', country_code, mobile })
+        });
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.error || 'Gateway error');
+        sessionStorage.setItem('gff_last_deposit', d.merchantOrderId);
+        window.location.href = d.h5Url; // H5 redirect handling
+      } catch (e) {
+        AradelAuth.toast(e.message, 'error');
+        btn.disabled = false; btn.textContent = 'Pay with Mobile Money →';
+      }
+    }
+
+    async function loadAuto() {
+      const { data: txs } = await window.sb.from('payment_transactions')
+        .select('*').eq('user_id', UID).eq('kind', 'deposit')
+        .order('created_at', { ascending: false }).limit(8);
+      const list = document.getElementById('autoList');
+      if (!txs || !txs.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:14px;">No gateway deposits yet.</div>'; return; }
+      list.innerHTML = txs.map(t => `
+        <div class="dep-row">
+          <div><div class="dep-amt">${fmt(t.amount)}</div><div class="dep-sub">${t.mode.toUpperCase()} • ${t.merchant_order_id}<br>${new Date(t.created_at).toLocaleString()}</div></div>
+          <span class="st ${t.status}">${t.status.toUpperCase()}</span>
+        </div>`).join('');
+    }
+
+    // ===== MANUAL DEPOSIT =====
     async function submitDeposit() {
       const btn = document.getElementById('depBtn');
       const amount = Number(document.getElementById('depAmount').value);
       const method = document.getElementById('depMethod').value;
       const reference = document.getElementById('depRef').value.trim();
-
       btn.disabled = true; btn.textContent = 'Submitting...';
       try {
         const res = await fetch('/api/deposit/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: UID, amount, method, reference })
         });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error);
+        const d = await res.json();
+        if (!d.ok) throw new Error(d.error);
         AradelAuth.toast('Deposit submitted — awaiting approval');
-        document.getElementById('depAmount').value = '';
-        document.getElementById('depRef').value = '';
-        load();
-      } catch (e) {
-        AradelAuth.toast(e.message, 'error');
-      }
+        document.getElementById('depAmount').value = ''; document.getElementById('depRef').value = '';
+        loadManual();
+      } catch (e) { AradelAuth.toast(e.message, 'error'); }
       btn.disabled = false; btn.textContent = 'Submit Deposit Request';
     }
 
-    async function load() {
-      const { data: deps } = await window.sb.from('deposit_requests').select('*').eq('user_id', UID).order('created_at', { ascending: false }).limit(10);
+    async function loadManual() {
+      const { data: deps } = await window.sb.from('deposit_requests').select('*').eq('user_id', UID).order('created_at', { ascending: false }).limit(8);
       const list = document.getElementById('depList');
-      if (!deps || !deps.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:16px;">No deposit requests yet.</div>'; return; }
+      if (!deps || !deps.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:14px;">No manual requests yet.</div>'; return; }
       list.innerHTML = deps.map(d => `
         <div class="dep-row">
-          <div>
-            <div class="dep-amt">${fmt(d.amount)}</div>
-            <div class="dep-sub">${d.method} • ${new Date(d.created_at).toLocaleDateString()}</div>
-          </div>
+          <div><div class="dep-amt">${fmt(d.amount)}</div><div class="dep-sub">${d.method} • ${new Date(d.created_at).toLocaleDateString()}</div></div>
           <span class="st ${d.status}">${d.status.toUpperCase()}</span>
         </div>`).join('');
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
-      const session = await AradelAuth.getSession();
-      if (!session) { window.location.href = '/'; return; }
-      UID = session.user.id;
-      load();
+      SESSION = await AradelAuth.getSession();
+      if (!SESSION) { window.location.href = '/'; return; }
+      UID = SESSION.user.id;
+
+      const { data: s } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
+      SETTINGS = s;
+      if (s && !s.otpay_enabled) {
+        document.querySelector('[data-p="auto"]').textContent = '⚡ Gateway (Disabled)';
+        document.getElementById('pane-auto').innerHTML = '<div class="gw-note">⚠️ Instant deposits are temporarily disabled by admin. Please use Manual Deposit.</div>';
+      }
+      if (s?.otpay_country) { document.getElementById('autoCountry').value = s.otpay_country; updatePhoneHint(); }
+
+      loadAuto(); loadManual();
     });
   </script>
 </body>
