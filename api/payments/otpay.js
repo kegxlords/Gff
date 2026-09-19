@@ -171,7 +171,7 @@ async function withdrawCreate(supabase, uid, b) {
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { count: pend } = await supabase.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('kind', 'payout').in('status', ['pending', 'processing']).gte('created_at', since);
   if (pend > 0) return { status: 400, body: { error: 'You already have a pending payout (wait ~30 min or contact support)' } };
-  
+
   const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', uid).single();
   if (!wallet || Number(wallet.balance) < amt) return { status: 400, body: { error: 'Insufficient balance' } };
 
@@ -201,12 +201,15 @@ async function withdrawCreate(supabase, uid, b) {
     return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: 'Gateway timeout — resolves via query/callback' } };
   }
 
-  if (r.status !== 200 || r.data?.status === 2) {
-    await supabase.from('payment_transactions').update({ status: 'failed', last_error: r.data?.msg || 'rejected', updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
+  // Gateway rejected at creation (incl. HTTP-200 error bodies with code != 0)
+  const codeBad = r.data && r.data.code !== undefined && Number(r.data.code) !== 0;
+  if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
+    const errMsg = (r.data?.msg || 'Payout rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
+    await supabase.from('payment_transactions').update({ status: 'failed', last_error: errMsg, updated_at: new Date().toISOString() }).eq('merchant_order_id', id);
     await supabase.from('wallets').update({ balance: Number(wallet.balance), updated_at: new Date().toISOString() }).eq('user_id', uid);
     await supabase.from('wallet_transactions').insert({ user_id: uid, type: 'withdrawal_refund', amount: amt, description: 'OTPay payout rejected at creation — refund', balance_after: Number(wallet.balance) });
-    await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected at creation' }).eq('id', reqRow.id);
-    return { status: 502, body: { ok: false, error: r.data?.msg || 'Payout rejected', refunded: true } };
+    await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay rejected at creation: ' + errMsg }).eq('id', reqRow.id);
+    return { status: 502, body: { ok: false, error: errMsg, refunded: true } };
   }
 
   await supabase.from('payment_transactions').update({ provider_order_id: r.data?.payoutId ? String(r.data.payoutId) : null, meta: { gross: amt, fee, otpayResponse: r.data } }).eq('merchant_order_id', id);
