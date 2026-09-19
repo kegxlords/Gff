@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Payments - GFF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="adm-wrap">
+    <nav class="adm-nav">
+      <a class="adm-chip" href="/admin/dashboard">Overview</a>
+      <a class="adm-chip" href="/admin/deposits">Deposits</a>
+      <a class="adm-chip" href="/admin/withdrawals">Withdrawals</a>
+      <a class="adm-chip" href="/admin/users">Users</a>
+      <a class="adm-chip" href="/admin/investments">Investments</a>
+      <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/payments">Gateway</a>
+      <a class="adm-chip" href="/admin/settings">Settings</a>
+    </nav>
+
+    <h2 class="adm-title">OTPay Gateway Monitor</h2>
+    <div class="adm-stats">
+      <div class="adm-stat"><b id="cPending">0</b><span>Pending</span></div>
+      <div class="adm-stat"><b id="cPaid">0</b><span>Paid/Success</span></div>
+      <div class="adm-stat"><b id="cFailed">0</b><span>Failed</span></div>
+    </div>
+
+    <div class="adm-tabs">
+      <div class="adm-tab on" data-t="tx">Transactions</div>
+      <div class="adm-tab" data-t="wh">Webhook Events</div>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div id="app-footer"></div>
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/js/supabase.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/components.js"></script>
+  <script>
+    let SESSION = null, TAB = 'tx';
+    const fmt = n => Number(n).toLocaleString() + ' CFA';
+
+    async function adminGuard() {
+      const s = await AradelAuth.getSession();
+      if (!s) { location.href = '/'; return null; }
+      const { data: p } = await window.sb.from('users').select('is_admin').eq('id', s.user.id).single();
+      if (!p || !p.is_admin) { location.href = '/dashboard'; return null; }
+      return s;
+    }
+
+    async function load() {
+      if (TAB === 'tx') {
+        const { data: txs } = await window.sb.from('payment_transactions')
+          .select('*, users(email, full_name)').order('created_at', { ascending: false }).limit(100);
+        const all = txs || [];
+        document.getElementById('cPending').textContent = all.filter(t => t.status === 'pending' || t.status === 'processing').length;
+        document.getElementById('cPaid').textContent = all.filter(t => t.status === 'paid' || t.status === 'successful').length;
+        document.getElementById('cFailed').textContent = all.filter(t => t.status === 'failed').length;
+        document.getElementById('list').innerHTML = all.length ? all.map(t => `
+          <div class="adm-card">
+            <div class="adm-row-top">
+              <div>
+                <div class="adm-name">${t.users?.full_name || 'User'} — ${t.kind === 'deposit' ? ' Deposit' : ' Payout'}</div>
+                <div class="adm-sub">${t.users?.email || ''}<br>${t.merchant_order_id}<br>${t.mode.toUpperCase()} • ${t.country_code || ''} ${t.phone || ''}<br>${new Date(t.created_at).toLocaleString()}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="adm-amt ${t.kind === 'deposit' ? 'green' : 'red'}">${fmt(t.amount)}</div>
+                <span class="adm-st ${t.status}">${t.status.toUpperCase()}</span>
+              </div>
+            </div>
+            ${t.last_error ? `<div class="adm-sub" style="margin-top:8px;color:#DC143C;">${t.last_error}</div>` : ''}
+          </div>`).join('') : '<div class="adm-empty">No gateway transactions yet.</div>';
+      } else {
+        const { data: evs } = await window.sb.from('webhook_events').select('*').order('created_at', { ascending: false }).limit(100);
+        const all = evs || [];
+        document.getElementById('list').innerHTML = all.length ? all.map(e => `
+          <div class="adm-card">
+            <div class="adm-row-top">
+              <div>
+                <div class="adm-name">${e.event_key}</div>
+                <div class="adm-sub">${new Date(e.created_at).toLocaleString()} • attempts: ${e.attempts}</div>
+              </div>
+              <span class="adm-st ${e.status === 'processed' ? 'approved' : e.status === 'failed' ? 'rejected' : 'pending'}">${e.status.toUpperCase()}</span>
+            </div>
+          </div>`).join('') : '<div class="adm-empty">No webhook events yet.</div>';
+      }
+    }
+
+    document.querySelector('.adm-tabs').addEventListener('click', e => {
+      const t = e.target.closest('.adm-tab'); if (!t) return;
+      document.querySelector('.adm-tab.on').classList.remove('on'); t.classList.add('on');
+      TAB = t.dataset.t; load();
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      SESSION = await adminGuard();
+      if (!SESSION) return;
+      load();
+    });
+  </script>
+</body>
+</html>
