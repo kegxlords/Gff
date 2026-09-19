@@ -269,16 +269,24 @@ async function withdrawQuery(supabase, uid, b) {
     if (q === 1) {
       st = 'successful';
       if (tx.linked_request_id) await supabase.from('withdrawal_requests').update({ status: 'approved', admin_note: 'OTPay payout confirmed (query)' }).eq('id', tx.linked_request_id);
-    } else if (q === 2) {
+} else if (q === 2) {
       st = 'failed';
-      const refund = Number(tx.meta?.gross || tx.amount);
-      const { data: w } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).single();
-      if (w) {
-        const nb2 = Number(w.balance) + refund;
-        await supabase.from('wallets').update({ balance: nb2, updated_at: new Date().toISOString() }).eq('user_id', tx.user_id);
-        await supabase.from('wallet_transactions').insert({ user_id: tx.user_id, type: 'withdrawal_refund', amount: refund, description: 'OTPay payout failed (query) — refund', balance_after: nb2 });
+      if (tx.linked_request_id) {
+        const { data: flipped } = await supabase.from('withdrawal_requests')
+          .update({ status: 'rejected', admin_note: 'OTPay payout failed (query) — refunded' })
+          .eq('id', tx.linked_request_id)
+          .in('status', ['pending', 'approved'])
+          .select();
+        if (flipped && flipped.length) {
+          const refund = Number(tx.meta?.gross || tx.amount);
+          const { data: w } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).single();
+          if (w) {
+            const nb2 = Number(w.balance) + refund;
+            await supabase.from('wallets').update({ balance: nb2, updated_at: new Date().toISOString() }).eq('user_id', tx.user_id);
+            await supabase.from('wallet_transactions').insert({ user_id: tx.user_id, type: 'withdrawal_refund', amount: refund, description: 'OTPay payout failed (query) — refund', balance_after: nb2 });
+          }
+        }
       }
-      if (tx.linked_request_id) await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: 'OTPay payout failed (query) — refunded' }).eq('id', tx.linked_request_id);
     } else if (q === 4) st = 'processing';
     await supabase.from('payment_transactions').update({ status: st, updated_at: new Date().toISOString() }).eq('id', tx.id);
   }
