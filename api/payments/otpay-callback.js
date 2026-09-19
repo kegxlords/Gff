@@ -76,16 +76,27 @@ async function handleWithdraw(supabase, body, eventKey) {
   if (cb === 1) {
     st = 'successful';
     if (tx.linked_request_id) await supabase.from('withdrawal_requests').update({ status: 'approved', admin_note: `OTPay payout successful (${MODE})` }).eq('id', tx.linked_request_id);
-  } else if (cb === 2) {
+} else if (cb === 2) {
     st = 'failed';
-    const refund = Number(tx.meta?.gross || tx.amount);
-    const { data: w } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).single();
-    if (w) {
-      const nb = Number(w.balance) + refund;
-      await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', tx.user_id);
-      await supabase.from('wallet_transactions').insert({ user_id: tx.user_id, type: 'withdrawal_refund', amount: refund, description: `OTPay payout failed — refund (${MODE})`, balance_after: nb });
+    if (tx.linked_request_id) {
+      // ATOMIC FLIP: only ONE path (callback OR admin reject OR approve-fail) can ever refund
+      const { data: flipped } = await supabase.from('withdrawal_requests')
+        .update({ status: 'rejected', admin_note: `OTPay payout failed — refunded (${body.msg || ''})` })
+        .eq('id', tx.linked_request_id)
+        .in('status', ['pending', 'approved'])
+        .select();
+      if (flipped && flipped.length) {
+        const refund = Number(tx.meta?.gross || tx.amount);
+        const { data: w } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).single();
+        if (w) {
+          const nb = Number(w.balance) + refund;
+          await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', tx.user_id);
+          await supabase.from('wallet_transactions').insert({ user_id: tx.user_id, type: 'withdrawal_refund', amount: refund, description: `OTPay payout failed — refund (${MODE})`, balance_after: nb });
+        }
+      } else {
+        log('otpay.withdraw-callback', 'refund skipped — request already settled', { requestId: tx.linked_request_id });
+      }
     }
-    if (tx.linked_request_id) await supabase.from('withdrawal_requests').update({ status: 'rejected', admin_note: `OTPay payout failed — refunded (${body.msg || ''})` }).eq('id', tx.linked_request_id);
   } else if (cb === 4) st = 'processing';
 
   await supabase.from('payment_transactions').update({ status: st, provider_order_id: String(body.orderId || tx.provider_order_id), meta: { ...tx.meta, payTime: body.payTime, sessionId: body.sessionId, msg: body.msg }, updated_at: new Date().toISOString() }).eq('id', tx.id);
