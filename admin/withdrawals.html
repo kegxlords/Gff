@@ -72,6 +72,7 @@
       const d = await res.json();
       AradelAuth.toast(d.ok ? (d.message || 'Withdrawal ' + action + 'd') : d.error, d.ok ? 'success' : 'error');
       if (d.ok) load();
+      else if (TAB === 'pending') load(); // refresh to show any status changes
     }
 
     async function load() {
@@ -108,13 +109,16 @@
 
       list.innerHTML = all.map(w => {
         const gw = gwMap[w.id];
+        const rName = w.recipient_name || w.bank_cards?.account_name || '—';
+        const rMobile = w.recipient_mobile || w.bank_cards?.account_number || '—';
+        const rDest = ((w.operator || w.bank_cards?.bank_name || '') + ' ' + (w.country_code || '')).trim().toUpperCase();
         return `
         <div class="adm-card">
           <div class="adm-row-top">
             <div>
               <div class="adm-name">${w.users?.full_name || 'User'}</div>
               <div class="adm-sub">${w.users?.email || ''}<br>
-                💳 ${w.bank_cards?.bank_name || '—'} • ${w.bank_cards?.account_name || ''} • ${w.bank_cards?.account_number || ''}<br>
+                💳 ${rName} • ${rMobile}${rDest ? ' • ' + rDest : ''}<br>
                 ${new Date(w.created_at).toLocaleString()}</div>
             </div>
             <div style="text-align:right;">
