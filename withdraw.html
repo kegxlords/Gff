@@ -56,7 +56,7 @@
     <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending admin approval. Please wait for it to be processed.</div>
 
     <div id="wdPane">
-      <div class="gw-note rise d1">📋 Submit a withdrawal request. Admin will review and process it within 24 hours. You'll receive funds via Mobile Money or bank transfer.</div>
+      <div class="gw-note rise d1">📋 Submit a withdrawal request. Admin will review and process it within 24 hours via Mobile Money or bank transfer.</div>
       <div class="form-card rise d2">
         <label class="f-lbl">Amount to Withdraw (CFA) — min 1,000</label>
         <input class="f-inp" id="insAmount" type="number" min="1000" placeholder="e.g. 10000" oninput="insSummary()" />
@@ -66,7 +66,7 @@
             <select class="f-inp" id="insCountry" onchange="insCountryChanged()">
               <option value="CM">🇨🇲 Cameroon</option>
               <option value="CI">🇨🇮 Côte d'Ivoire</option>
-              <option value="SN">🇸🇳 Senegal</option>
+              <option value="SN">🇸 Senegal</option>
             </select>
           </div>
           <div id="opWrap">
@@ -100,7 +100,7 @@
   <script src="/assets/js/components.js"></script>
   <script>
     const HINTS = { CM: '237XXXXXXXXX', CI: '225XXXXXXXXX', SN: '221XXXXXXXXX' };
-    let UID = null, SESSION = null, BALANCE = 0, FEE_PCT = 15, BANKS = [];
+    let UID = null, SESSION = null, BALANCE = 0, FEE_PCT = 15;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
 
     function insCountryChanged() {
@@ -115,40 +115,38 @@
       document.getElementById('insNet').textContent = fmt(amt - fee);
     }
 
-    // ===== MANUAL WITHDRAWAL (admin queue) =====
+    // ===== SUBMIT TO ADMIN QUEUE (recipient details travel with the request) =====
     async function submitWithdrawal() {
       const btn = document.getElementById('insBtn');
       const amt = Number(document.getElementById('insAmount').value);
       const country_code = document.getElementById('insCountry').value;
       const mobile = document.getElementById('insPhone').value.trim();
       const name = document.getElementById('insName').value.trim();
+      const operator = (document.getElementById('insOperator') || {}).value || '';
 
       if (!amt || amt < 1000) return AradelAuth.toast('Minimum withdrawal is 1,000 CFA', 'error');
       if (amt > BALANCE) return AradelAuth.toast('Insufficient balance', 'error');
       if (!mobile) return AradelAuth.toast('Enter recipient mobile number', 'error');
       if (!name) return AradelAuth.toast('Enter recipient name', 'error');
-
-      // Check if user has a bank card (we'll use the first one)
-      if (!BANKS.length) {
-        if (confirm('You need a payout account. Add one now?')) {
-          window.location.href = '/bank';
-        }
-        return;
-      }
-
-      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\n\nThis will be reviewed by admin within 24 hours.`)) return;
+      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\n\nAdmin will review within 24 hours.`)) return;
 
       btn.disabled = true; btn.textContent = 'Submitting...';
       try {
-        // Submit to the manual withdrawal endpoint (creates pending request, deducts balance)
         const r = await fetch('/api/withdraw/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: UID, bank_card_id: BANKS[0].id, amount: amt })
+          body: JSON.stringify({
+            user_id: UID,
+            amount: amt,
+            recipient_name: name,
+            recipient_mobile: mobile,
+            country_code,
+            operator
+          })
         });
         const d = await r.json();
         if (!d.ok) throw new Error(d.error);
-        AradelAuth.toast('📤 Withdrawal request submitted — admin will review');
+        AradelAuth.toast('📤 Request submitted — admin will review');
         setTimeout(() => location.href = '/transaction-history', 1400);
       } catch (e) {
         AradelAuth.toast(e.message, 'error');
@@ -164,11 +162,10 @@
       if (!txs || !txs.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:14px;">No withdrawal requests yet.</div>'; return; }
       list.innerHTML = txs.map(t => `
         <div class="dep-row">
-          <div><div class="dep-amt">${fmt(t.amount)}</div><div class="dep-sub">Net: ${fmt(t.net_amount)} • ${new Date(t.created_at).toLocaleString()}</div></div>
+          <div><div class="dep-amt">${fmt(t.amount)}</div><div class="dep-sub">To: ${t.recipient_mobile || '—'} • Net ${fmt(t.net_amount)}<br>${new Date(t.created_at).toLocaleString()}</div></div>
           <span class="st ${t.status}">${t.status.toUpperCase()}</span>
         </div>`).join('');
-      const hasPending = txs.some(t => t.status === 'pending');
-      if (hasPending) document.getElementById('pendBanner').style.display = 'block';
+      if (txs.some(t => t.status === 'pending')) document.getElementById('pendBanner').style.display = 'block';
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
@@ -188,10 +185,6 @@
       const { data: wallet } = await window.sb.from('wallets').select('balance').eq('user_id', UID).single();
       BALANCE = wallet ? Number(wallet.balance) : 0;
       document.getElementById('wdBalance').textContent = fmt(BALANCE);
-
-      // Load bank cards (payout accounts)
-      const { data: banks } = await window.sb.from('bank_cards').select('*').eq('user_id', UID).order('is_default', { ascending: false });
-      BANKS = banks || [];
 
       loadRequests();
     });
