@@ -1,18 +1,5 @@
-// api/withdraw/create.js — manual withdrawal request, queued to next scheduled payout
+// api/withdraw/create.js — manual withdrawal request, only inside the daily window
 const { createClient } = require('@supabase/supabase-js');
-
-function nextPayoutDate(daysArr, hour) {
-  const now = new Date();
-  for (let i = 0; i < 8; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() + i);
-    if (daysArr.includes(d.getDay())) {
-      d.setUTCHours(Number(hour) || 17, 0, 0, 0);
-      if (d > now) return d.toISOString();
-    }
-  }
-  return null;
-}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,8 +32,28 @@ module.exports = async function handler(req, res) {
     const fee = Math.round(amt * feePct / 100);
     const net = amt - fee;
 
-    const daysArr = String(settings?.withdrawal_days || '1,4').split(',').map(x => Number(x.trim())).filter(x => !isNaN(x));
-    const scheduled_for = nextPayoutDate(daysArr, settings?.withdrawal_hour);
+    // ---- DAILY WINDOW ENFORCEMENT (local time = UTC + offset) ----
+    const offset = Number(settings?.schedule_utc_offset ?? 1);
+    const openH = Number(settings?.withdrawal_open_hour ?? 9);
+    const closeH = Number(settings?.withdrawal_close_hour ?? 18);
+    const nowMs = Date.now();
+    const localNow = new Date(nowMs + offset * 3600000);
+    const curH = localNow.getUTCHours() + localNow.getUTCMinutes() / 60;
+    const inWindow = curH >= openH && curH < closeH;
+
+    if (!inWindow) {
+      const pad = n => String(n).padStart(2, '0');
+      return res.status(400).json({
+        ok: false,
+        error: `Withdrawals are open daily from ${pad(openH)}:00 to ${pad(closeH)}:00. Please submit within the window.`
+      });
+    }
+
+    // scheduled_for = end of today's processing window (local close → UTC)
+    const closeLocal = new Date(localNow);
+    closeLocal.setUTCHours(closeH, 0, 0, 0);
+    if (closeLocal <= localNow) closeLocal.setUTCDate(closeLocal.getUTCDate() + 1);
+    const scheduled_for = new Date(closeLocal.getTime() - offset * 3600000).toISOString();
 
     const newBalance = Number(wallet.balance) - amt;
     await supabase.from('wallets').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', user_id);
@@ -72,7 +79,7 @@ module.exports = async function handler(req, res) {
       balance_after: newBalance
     });
 
-    return res.status(200).json({ ok: true, message: 'Withdrawal queued for next payout window', scheduled_for, request_id: newReq.id });
+    return res.status(200).json({ ok: true, message: 'Withdrawal queued — admin processes before window closes', scheduled_for, request_id: newReq.id });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
