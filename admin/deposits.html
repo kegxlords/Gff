@@ -21,11 +21,19 @@
       <a class="adm-chip" href="/admin/settings">Settings</a>
     </nav>
 
-    <h2 class="adm-title">Deposit Requests</h2>
+    <h2 class="adm-title">Deposits</h2>
+
+    <div class="adm-stats">
+      <div class="adm-stat"><b id="cPending">0</b><span>Pending</span></div>
+      <div class="adm-stat"><b id="cPaid">0</b><span>Paid</span></div>
+      <div class="adm-stat"><b id="cFailed">0</b><span>Failed</span></div>
+    </div>
+
     <div class="adm-tabs">
       <div class="adm-tab on" data-t="pending">Pending</div>
-      <div class="adm-tab" data-t="approved">Approved</div>
-      <div class="adm-tab" data-t="rejected">Rejected</div>
+      <div class="adm-tab" data-t="paid">Paid</div>
+      <div class="adm-tab" data-t="failed">Failed</div>
+      <div class="adm-tab" data-t="refunded">Refunded</div>
     </div>
     <div id="list"></div>
   </div>
@@ -48,43 +56,68 @@
       return s;
     }
 
-    async function act(id, action) {
-      if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} this deposit? ${action === 'approve' ? 'Wallet will be credited + 22% referral paid.' : ''}`)) return;
-      const res = await fetch('/api/deposit/approve', {
+    async function act(merchantOrderId, action) {
+      const msgs = {
+        'admin-deposit-verify': 'Query gateway and auto-credit if paid?',
+        'admin-deposit-credit': 'FORCE CREDIT without gateway confirmation? (use only if gateway callback failed but payment was received)',
+        'admin-deposit-fail': 'Mark this deposit as FAILED?'
+      };
+      if (!confirm(msgs[action])) return;
+
+      const res = await fetch('/api/payments/otpay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
-        body: JSON.stringify({ action, request_id: id })
+        body: JSON.stringify({ action, merchantOrderId })
       });
       const d = await res.json();
-      AradelAuth.toast(d.ok ? 'Deposit ' + action + 'd' : d.error, d.ok ? 'success' : 'error');
+      AradelAuth.toast(d.message || (d.ok ? 'Done' : d.error), d.ok ? 'success' : 'error');
       if (d.ok) load();
     }
 
     async function load() {
-      const { data: deps } = await window.sb.from('deposit_requests')
-        .select('*, users(full_name, email)').eq('status', TAB)
-        .order('created_at', { ascending: false }).limit(50);
+      // Counts
+      const { count: cp } = await window.sb.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('kind', 'deposit').eq('status', 'pending');
+      const { count: cpa } = await window.sb.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('kind', 'deposit').eq('status', 'paid');
+      const { count: cf } = await window.sb.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('kind', 'deposit').eq('status', 'failed');
+      document.getElementById('cPending').textContent = cp || 0;
+      document.getElementById('cPaid').textContent = cpa || 0;
+      document.getElementById('cFailed').textContent = cf || 0;
+
+      // Transactions
+      const { data: txs } = await window.sb.from('payment_transactions')
+        .select('*, users(full_name, email)')
+        .eq('kind', 'deposit')
+        .eq('status', TAB)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       const list = document.getElementById('list');
-      if (!deps || !deps.length) { list.innerHTML = '<div class="adm-empty">No ' + TAB + ' deposits.</div>'; return; }
+      if (!txs || !txs.length) {
+        list.innerHTML = '<div class="adm-empty">No ' + TAB + ' deposits.</div>';
+        return;
+      }
 
-      list.innerHTML = deps.map(d => `
+      list.innerHTML = txs.map(tx => `
         <div class="adm-card">
           <div class="adm-row-top">
             <div>
-              <div class="adm-name">${d.users?.full_name || 'User'}</div>
-              <div class="adm-sub">${d.users?.email || ''}<br>${d.method || ''} • Ref: ${d.reference || '—'}<br>${new Date(d.created_at).toLocaleString()}</div>
+              <div class="adm-name">${tx.users?.full_name || 'User'}</div>
+              <div class="adm-sub">${tx.users?.email || ''}<br>
+                ${tx.mode?.toUpperCase() || 'OTPay'} • ${tx.country_code || ''} ${tx.phone || ''}<br>
+                Order: ${tx.merchant_order_id}<br>
+                ${new Date(tx.created_at).toLocaleString()}</div>
             </div>
             <div style="text-align:right;">
-              <div class="adm-amt green">${fmt(d.amount)}</div>
-              <span class="adm-st ${d.status}">${d.status.toUpperCase()}</span>
+              <div class="adm-amt green">${fmt(tx.amount)}</div>
+              <span class="adm-st ${tx.status}">${tx.status.toUpperCase()}</span>
             </div>
           </div>
           ${TAB === 'pending' ? `
           <div class="adm-actions">
-            <button class="adm-btn ok" onclick="act('${d.id}','approve')">✓ Approve</button>
-            <button class="adm-btn no" onclick="act('${d.id}','reject')">✕ Reject</button>
-          </div>` : (d.admin_note ? `<div class="adm-sub" style="margin-top:8px;">Note: ${d.admin_note}</div>` : '')}
+            <button class="adm-btn ok" onclick="act('${tx.merchant_order_id}','admin-deposit-verify')">🔄 Verify & Credit</button>
+            <button class="adm-btn plain" onclick="act('${tx.merchant_order_id}','admin-deposit-credit')">💰 Force Credit</button>
+            <button class="adm-btn no" onclick="act('${tx.merchant_order_id}','admin-deposit-fail')">✕ Mark Failed</button>
+          </div>` : ''}
         </div>`).join('');
     }
 
