@@ -26,7 +26,7 @@
 
     <div class="adm-stats">
       <div class="adm-stat"><b id="cPending">0</b><span>Pending</span></div>
-      <div class="adm-stat"><b id="cApproved">0</b><span>Approved/Sent</span></div>
+      <div class="adm-stat"><b id="cApproved">0</b><span>Paid/Approved</span></div>
       <div class="adm-stat"><b id="cRejected">0</b><span>Rejected</span></div>
     </div>
 
@@ -47,12 +47,7 @@
   <script>
     let SESSION = null, TAB = 'pending';
     const fmt = n => Number(n).toLocaleString() + ' CFA';
-
-    const GW_CLASS = {
-      pending: 'pending', processing: 'pending',
-      successful: 'approved', paid: 'approved',
-      failed: 'rejected', refunded: 'rejected'
-    };
+    const GW_CLASS = { pending: 'pending', processing: 'pending', successful: 'approved', paid: 'approved', failed: 'rejected', refunded: 'rejected' };
 
     async function adminGuard() {
       const s = await AradelAuth.getSession();
@@ -63,20 +58,23 @@
     }
 
     async function act(id, action) {
-      if (!confirm(`${action === 'approve' ? 'Approve and send this payout to OTPay NOW?' : 'Reject and refund the user?'}`)) return;
+      const msgs = {
+        approve: 'Confirm you have PAID this user manually outside the system?',
+        dispatch: 'Send this payout to OTPay NOW?',
+        reject: 'Reject and refund the user?'
+      };
+      if (!confirm(msgs[action])) return;
       const res = await fetch('/api/withdraw/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
         body: JSON.stringify({ action, request_id: id })
       });
       const d = await res.json();
-      AradelAuth.toast(d.ok ? (d.message || 'Withdrawal ' + action + 'd') : d.error, d.ok ? 'success' : 'error');
-      if (d.ok) load();
-      else if (TAB === 'pending') load(); // refresh to show any status changes
+      AradelAuth.toast(d.ok ? (d.message || 'Done') : d.error, d.ok ? 'success' : 'error');
+      load();
     }
 
     async function load() {
-      // Counts
       const { count: cp } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       const { count: ca } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'approved');
       const { count: cr } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'rejected');
@@ -84,26 +82,18 @@
       document.getElementById('cApproved').textContent = ca || 0;
       document.getElementById('cRejected').textContent = cr || 0;
 
-      // Requests for current tab
       const { data: wds } = await window.sb.from('withdrawal_requests')
         .select('*, users(full_name, email), bank_cards(bank_name, account_name, account_number)')
-        .eq('status', TAB)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .eq('status', TAB).order('scheduled_for', { ascending: true, nullsFirst: false }).limit(50);
 
       const list = document.getElementById('list');
       const all = wds || [];
-      if (!all.length) {
-        list.innerHTML = '<div class="adm-empty">No ' + TAB + ' withdrawals.</div>';
-        return;
-      }
+      if (!all.length) { list.innerHTML = '<div class="adm-empty">No ' + TAB + ' withdrawals.</div>'; return; }
 
-      // Gateway dispatch status for these requests
       const ids = all.map(w => w.id);
       const { data: gws } = await window.sb.from('payment_transactions')
         .select('linked_request_id, status, merchant_order_id')
-        .in('linked_request_id', ids)
-        .order('created_at', { ascending: false });
+        .in('linked_request_id', ids).order('created_at', { ascending: false });
       const gwMap = {};
       (gws || []).forEach(g => { if (!gwMap[g.linked_request_id]) gwMap[g.linked_request_id] = g; });
 
@@ -119,7 +109,8 @@
               <div class="adm-name">${w.users?.full_name || 'User'}</div>
               <div class="adm-sub">${w.users?.email || ''}<br>
                 💳 ${rName} • ${rMobile}${rDest ? ' • ' + rDest : ''}<br>
-                ${new Date(w.created_at).toLocaleString()}</div>
+                📅 Payout: ${w.scheduled_for ? new Date(w.scheduled_for).toLocaleString() : '—'}<br>
+                Requested: ${new Date(w.created_at).toLocaleString()}</div>
             </div>
             <div style="text-align:right;">
               <div class="adm-amt red">${fmt(w.amount)}</div>
@@ -131,20 +122,19 @@
           ${w.admin_note ? `<div class="adm-sub" style="margin-top:8px;">📝 ${w.admin_note}</div>` : ''}
           ${TAB === 'pending' ? `
           <div class="adm-actions">
-            <button class="adm-btn ok" onclick="act('${w.id}','approve')">✓ Approve & Send</button>
-            <button class="adm-btn no" onclick="act('${w.id}','reject')">✕ Reject + Refund</button>
+            <button class="adm-btn ok" onclick="act('${w.id}','approve')">✓ Mark Paid</button>
+            <button class="adm-btn plain" onclick="act('${w.id}','dispatch')">⚡ OTPay</button>
+            <button class="adm-btn no" onclick="act('${w.id}','reject')">✕ Refund</button>
           </div>` : ''}
         </div>`;
       }).join('');
     }
 
     document.querySelector('.adm-tabs').addEventListener('click', e => {
-      const t = e.target.closest('.adm-tab');
-      if (!t) return;
+      const t = e.target.closest('.adm-tab'); if (!t) return;
       document.querySelector('.adm-tab.on').classList.remove('on');
       t.classList.add('on');
-      TAB = t.dataset.t;
-      load();
+      TAB = t.dataset.t; load();
     });
 
     document.addEventListener('DOMContentLoaded', async function () {
