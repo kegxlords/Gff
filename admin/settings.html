@@ -18,9 +18,11 @@
       <a class="adm-chip" href="/admin/users">Users</a>
       <a class="adm-chip" href="/admin/investments">Investments</a>
       <a class="adm-chip" href="/admin/messages">Messages</a>
+      <a class="adm-chip" href="/admin/payments">Gateway</a>
       <a class="adm-chip on" href="/admin/settings">Settings</a>
     </nav>
 
+    <!-- ================= PLATFORM SETTINGS ================= -->
     <h2 class="adm-title">Platform Settings</h2>
     <div class="adm-card">
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Withdrawal Fee (%)</label>
@@ -31,14 +33,30 @@
       <input class="adm-input" id="setTgGroup" placeholder="https://t.me/..." />
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Telegram Customer Service URL</label>
       <input class="adm-input" id="setTgSupport" placeholder="https://t.me/..." />
-      <label class="adm-sub" style="display:block;margin-bottom:6px;">WhatsApp Group URL (optional)</label>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">WhatsApp Group URL (optional — hidden if empty)</label>
       <input class="adm-input" id="setWa" placeholder="https://chat.whatsapp.com/..." />
-      <button class="adm-go" onclick="saveSettings()">💾 Save Settings</button>
+      <button class="adm-go" onclick="saveSettings()">💾 Save Platform Settings</button>
     </div>
 
-<h2 class="adm-title" style="font-size:16px;margin-top:22px;">OTPay Gateway</h2>
+    <!-- ================= PAYOUT SCHEDULE ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">📅 Payout Schedule</h2>
     <div class="adm-card">
-      <div class="adm-sub" style="margin-bottom:12px;">Active mode is controlled by the server env <b>OTPAY_MODE</b> (test/live). Use the switch below for an instant kill-switch without redeploying.</div>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Schedule Text (shown to users)</label>
+      <input class="adm-input" id="setSchedText" placeholder="Mondays & Thursdays, 5:00 PM (WAT)" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Payout Days (0=Sun, 1=Mon … 6=Sat — comma separated)</label>
+      <input class="adm-input" id="setSchedDays" placeholder="1,4" oninput="previewNext()" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Payout Hour (UTC, 0–23)</label>
+      <input class="adm-input" id="setSchedHour" type="number" min="0" max="23" placeholder="17" oninput="previewNext()" />
+      <div class="adm-sub" id="nextPreview" style="margin-bottom:10px;"></div>
+      <button class="adm-go" onclick="saveSchedule()">💾 Save Schedule</button>
+    </div>
+
+    <!-- ================= OTPAY GATEWAY ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">⚡ OTPay Gateway</h2>
+    <div class="adm-card">
+      <div class="adm-sub" style="margin-bottom:12px;">
+        Active mode (test/live) + credentials are controlled by server env vars (<b>OTPAY_MODE</b>, <b>OTPAY_*_PAY_URL</b>, <b>OTPAY_*_MERCHANT_ID</b>, <b>OTPAY_*_APP_SECRET</b>). Use the switch below as an instant kill-switch without redeploying.
+      </div>
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Gateway Enabled</label>
       <select class="adm-input" id="setOtpayEnabled">
         <option value="true">✅ Enabled</option>
@@ -46,36 +64,45 @@
       </select>
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Country</label>
       <select class="adm-input" id="setOtpayCountry">
-        <option value="CM">🇲 Cameroon (XAF)</option>
-        <option value="CI">🇨🇮 Côte d'Ivoire (XOF)</option>
+        <option value="CM">🇨 Cameroon (XAF)</option>
+        <option value="CI">🇨 Côte d'Ivoire (XOF)</option>
         <option value="SN">🇸🇳 Senegal (XOF)</option>
         <option value="NG">🇳🇬 Nigeria (NGN)</option>
         <option value="GH">🇬🇭 Ghana (GHS)</option>
       </select>
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Currency</label>
       <input class="adm-input" id="setOtpayCurrency" placeholder="XAF" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Callback URL (register this in OTPay dashboard)</label>
+      <input class="adm-input" id="cbUrl" readonly style="background:#F3F4F6;color:#7A8699;" />
       <button class="adm-go" onclick="saveOtpay()">💾 Save Gateway Settings</button>
+      <button class="adm-btn plain" style="width:100%;" onclick="copyCb()">📋 Copy Callback URL</button>
     </div>
 
-    
-    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">Gift Codes</h2>
-    <input class="adm-input" id="gcCode" placeholder="Code (e.g. GFF-NEWYEAR)" />
-    <input class="adm-input" id="gcValue" type="number" placeholder="Value in CFA (e.g. 2000)" />
-    <button class="adm-go" onclick="createCode()">+ Create Gift Code</button>
+    <!-- ================= GIFT CODES ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">🎁 Gift Codes</h2>
+    <div class="adm-card">
+      <input class="adm-input" id="gcCode" placeholder="Code (e.g. GFF-NEWYEAR)" />
+      <input class="adm-input" id="gcValue" type="number" placeholder="Value in CFA (e.g. 2000)" />
+      <button class="adm-go" onclick="createCode()">+ Create Gift Code</button>
+    </div>
     <div id="gcList"></div>
 
-    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">Platform Tools</h2>
+    <!-- ================= PLATFORM TOOLS ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">🛠 Platform Tools</h2>
     <button class="adm-go" onclick="runIncome()">🌙 Run Daily Income Now</button>
     <input class="adm-input" id="newAdminEmail" placeholder="Email to grant admin..." style="margin-top:8px;" />
     <button class="adm-go" onclick="makeAdmin()">👑 Grant Admin by Email</button>
 
+    <!-- ================= NOTES ================= -->
     <div class="adm-card" style="margin-top:16px;">
       <div class="adm-name">ℹ️ Notes</div>
       <div class="adm-sub">
         • Daily income auto-runs nightly at 23:00 UTC via Vercel cron.<br>
         • Fee & bonus changes apply to NEW requests instantly.<br>
-        • Support links appear on /support and the dashboard popup.<br>
-        • Deposit payment details are edited in <b>recharge.html</b>.
+        • Support links appear on /support and the dashboard welcome popup.<br>
+        • Withdrawal requests queue automatically for the next payout window; process each one manually (✓ Mark Paid) or via OTPay (⚡).<br>
+        • Switching test → live = change <b>OTPAY_MODE</b> env var + redeploy. No code changes, verification stays on.<br>
+        • Duplicate callbacks, double refunds and double dispatches are all blocked server-side.
       </div>
     </div>
   </div>
@@ -98,32 +125,75 @@
       return s;
     }
 
+    // ---------- PLATFORM SETTINGS ----------
     async function saveSettings() {
+      const fee = Number(document.getElementById('setFee').value);
+      const bonus = Number(document.getElementById('setBonus').value);
+      if (isNaN(fee) || fee < 0 || fee > 90) return AradelAuth.toast('Fee must be 0–90', 'error');
+      if (isNaN(bonus) || bonus < 0 || bonus > 90) return AradelAuth.toast('Bonus must be 0–90', 'error');
       const payload = {
-        withdrawal_fee_percent: Number(document.getElementById('setFee').value),
-        referral_bonus_percent: Number(document.getElementById('setBonus').value),
+        withdrawal_fee_percent: fee,
+        referral_bonus_percent: bonus,
         telegram_group_url: document.getElementById('setTgGroup').value.trim(),
         telegram_support_url: document.getElementById('setTgSupport').value.trim(),
         whatsapp_group_url: document.getElementById('setWa').value.trim()
       };
       const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
       if (error) return AradelAuth.toast(error.message, 'error');
-      AradelAuth.toast('Settings saved — live across the platform');
+      AradelAuth.toast('Platform settings saved — live across the app');
     }
 
-    async function loadSettings() {
-      const { data: s } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
-      if (!s) return;
-      document.getElementById('setFee').value = s.withdrawal_fee_percent;
-      document.getElementById('setBonus').value = s.referral_bonus_percent;
-      document.getElementById('setTgGroup').value = s.telegram_group_url || '';
-      document.getElementById('setTgSupport').value = s.telegram_support_url || '';
-      document.getElementById('setWa').value = s.whatsapp_group_url || '';
-      document.getElementById('setOtpayEnabled').value = String(s.otpay_enabled !== false);
-      if (s.otpay_country) document.getElementById('setOtpayCountry').value = s.otpay_country;
-      document.getElementById('setOtpayCurrency').value = s.otpay_currency || 'XAF';
+    // ---------- PAYOUT SCHEDULE ----------
+    function previewNext() {
+      const days = String(document.getElementById('setSchedDays').value || '1,4').split(',').map(x => Number(x.trim())).filter(x => !isNaN(x));
+      const hour = Number(document.getElementById('setSchedHour').value || 17);
+      const now = new Date();
+      let next = null;
+      for (let i = 0; i < 8; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() + i);
+        if (days.includes(d.getDay())) {
+          d.setUTCHours(hour, 0, 0, 0);
+          if (d > now) { next = d; break; }
+        }
+      }
+      document.getElementById('nextPreview').innerHTML = next
+        ? '⏭ Next payout window: <b>' + next.toLocaleString() + '</b>'
+        : '⚠ Invalid days/hour — check values';
+    }
+    async function saveSchedule() {
+      const daysRaw = String(document.getElementById('setSchedDays').value || '').trim();
+      const days = daysRaw.split(',').map(x => Number(x.trim())).filter(x => !isNaN(x) && x >= 0 && x <= 6);
+      if (!days.length) return AradelAuth.toast('Enter at least one valid day (0-6)', 'error');
+      const hour = Number(document.getElementById('setSchedHour').value);
+      if (isNaN(hour) || hour < 0 || hour > 23) return AradelAuth.toast('Hour must be 0–23', 'error');
+      const payload = {
+        withdrawal_schedule_text: document.getElementById('setSchedText').value.trim() || 'Mondays & Thursdays, 5:00 PM',
+        withdrawal_days: days.join(','),
+        withdrawal_hour: hour
+      };
+      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Payout schedule saved');
     }
 
+    // ---------- OTPAY GATEWAY ----------
+    async function saveOtpay() {
+      const payload = {
+        otpay_enabled: document.getElementById('setOtpayEnabled').value === 'true',
+        otpay_country: document.getElementById('setOtpayCountry').value,
+        otpay_currency: document.getElementById('setOtpayCurrency').value.trim() || 'XAF'
+      };
+      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Gateway settings saved');
+    }
+    function copyCb() {
+      const t = document.getElementById('cbUrl').value;
+      navigator.clipboard ? navigator.clipboard.writeText(t).then(() => AradelAuth.toast('Callback URL copied')) : AradelAuth.toast(t);
+    }
+
+    // ---------- GIFT CODES ----------
     async function createCode() {
       const code = document.getElementById('gcCode').value.trim().toUpperCase();
       const value = Number(document.getElementById('gcValue').value);
@@ -135,14 +205,12 @@
       document.getElementById('gcValue').value = '';
       loadCodes();
     }
-
     async function delCode(id) {
       if (!confirm('Delete this gift code?')) return;
       await window.sb.from('gift_codes').delete().eq('id', id);
       AradelAuth.toast('Code deleted');
       loadCodes();
     }
-
     async function loadCodes() {
       const { data: codes } = await window.sb.from('gift_codes').select('*').order('created_at', { ascending: false });
       document.getElementById('gcList').innerHTML = (codes && codes.length) ? codes.map(c => `
@@ -160,22 +228,13 @@
         </div>`).join('') : '<div class="adm-empty">No gift codes yet.</div>';
     }
 
+    // ---------- TOOLS ----------
     async function runIncome() {
       if (!confirm('Credit daily income to all active plans now?')) return;
       const res = await fetch('/api/admin/daily-income', { headers: { 'Authorization': 'Bearer ' + SESSION.access_token } });
       const d = await res.json();
       AradelAuth.toast(d.ok ? `Credited ${d.credited} plans, ${d.completed} completed` : d.error, d.ok ? 'success' : 'error');
     }
-    async function saveOtpay() {
-      const payload = {
-        otpay_enabled: document.getElementById('setOtpayEnabled').value === 'true',
-        otpay_country: document.getElementById('setOtpayCountry').value,
-        otpay_currency: document.getElementById('setOtpayCurrency').value.trim() || 'XAF'
-      };
-      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
-      if (error) return AradelAuth.toast(error.message, 'error');
-      AradelAuth.toast('Gateway settings saved');
-}
     async function makeAdmin() {
       const email = document.getElementById('newAdminEmail').value.trim().toLowerCase();
       if (!email) return AradelAuth.toast('Enter an email', 'error');
@@ -184,6 +243,25 @@
       if (error) return AradelAuth.toast(error.message, 'error');
       AradelAuth.toast('Admin granted (if the email exists)');
       document.getElementById('newAdminEmail').value = '';
+    }
+
+    // ---------- LOAD ----------
+    async function loadSettings() {
+      const { data: s } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
+      if (!s) return;
+      document.getElementById('setFee').value = s.withdrawal_fee_percent;
+      document.getElementById('setBonus').value = s.referral_bonus_percent;
+      document.getElementById('setTgGroup').value = s.telegram_group_url || '';
+      document.getElementById('setTgSupport').value = s.telegram_support_url || '';
+      document.getElementById('setWa').value = s.whatsapp_group_url || '';
+      document.getElementById('setSchedText').value = s.withdrawal_schedule_text || '';
+      document.getElementById('setSchedDays').value = s.withdrawal_days || '1,4';
+      document.getElementById('setSchedHour').value = s.withdrawal_hour ?? 17;
+      document.getElementById('setOtpayEnabled').value = String(s.otpay_enabled !== false);
+      if (s.otpay_country) document.getElementById('setOtpayCountry').value = s.otpay_country;
+      document.getElementById('setOtpayCurrency').value = s.otpay_currency || 'XAF';
+      document.getElementById('cbUrl').value = location.origin + '/api/payments/otpay-callback';
+      previewNext();
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
