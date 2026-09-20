@@ -1,23 +1,65 @@
 /* ============================================================
    GREEN FARM FORTUNE — FRONTEND AUTH & UTILITY HELPERS
-   File: assets/js/auth.js
+   File: assets/js/auth.js (with BAN enforcement)
    ============================================================ */
 (function () {
   const AradelAuth = {
     _ensured: false,
+    _banChecked: false,
+    _banned: false,
 
-    /* ---------- SESSION (with auto-repair) ---------- */
+    /* ---------- SESSION (with auto-repair + ban check) ---------- */
     async getSession() {
       try {
         const { data, error } = await window.sb.auth.getSession();
         if (error) { console.error('[GFF] Session error:', error); return null; }
         const session = data.session || null;
-        if (session) await this.ensureProfile(session);
+        if (session) {
+          await this.ensureProfile(session);
+          const allowed = await this.checkBan(session);
+          if (!allowed) return null;
+        }
         return session;
       } catch (e) {
         console.error('[GFF] Session exception:', e);
         return null;
       }
+    },
+
+    /* ---------- BAN ENFORCEMENT (kicks banned users off every page) ---------- */
+    async checkBan(session) {
+      if (this._banChecked) return !this._banned;
+      this._banChecked = true;
+      try {
+        const { data } = await window.sb
+          .from('users').select('is_banned, ban_reason')
+          .eq('id', session.user.id).single();
+        if (data && data.is_banned) {
+          this._banned = true;
+          this._showBanned(data.ban_reason);
+          window.sb.auth.signOut().catch(() => {});
+          return false;
+        }
+      } catch (e) {
+        console.warn('[GFF] checkBan:', e.message);
+      }
+      return true;
+    },
+
+    _showBanned(reason) {
+      if (document.getElementById('gffBanned')) return;
+      const d = document.createElement('div');
+      d.id = 'gffBanned';
+      d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#0E1B33,#1a2b4d);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Inter,sans-serif;';
+      d.innerHTML = `
+        <div style="max-width:380px;width:100%;background:#fff;border-radius:24px;padding:32px 26px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+          <div style="font-size:52px;">🚫</div>
+          <h2 style="margin:12px 0 6px;font-size:22px;color:#0E1B33;font-weight:800;">Account Suspended</h2>
+          <p style="color:#7A8699;font-size:13px;line-height:1.6;margin:0 0 6px;">${reason ? 'Reason: ' + reason : 'Your account has been suspended by the administrator.'}</p>
+          <p style="color:#7A8699;font-size:12px;line-height:1.6;margin:0 0 20px;">If you believe this is a mistake, contact customer support on Telegram.</p>
+          <button onclick="location.href='/'" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#0033A0,#002171);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;">Back to Home</button>
+        </div>`;
+      document.body.appendChild(d);
     },
 
     // Creates profile + wallet if they're missing (fixes old broken accounts)
@@ -52,7 +94,7 @@
     async requireAuth() {
       const session = await this.getSession();
       if (!session) {
-        window.location.href = '/';
+        if (!this._banned) window.location.href = '/';  // banned users keep the suspension screen
         return null;
       }
       return session;
@@ -62,10 +104,22 @@
       return window.sb.auth.onAuthStateChange((event, session) => cb(event, session)).data.subscription;
     },
 
-    /* ---------- LOGIN (browser-side so session persists) ---------- */
+    /* ---------- LOGIN (blocked at the door if banned) ---------- */
     async login(email, password) {
       const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
+      try {
+        const { data: prof } = await window.sb
+          .from('users').select('is_banned, ban_reason')
+          .eq('id', data.user.id).single();
+        if (prof && prof.is_banned) {
+          await window.sb.auth.signOut();
+          throw new Error('Account suspended' + (prof.ban_reason ? ': ' + prof.ban_reason : ' — contact support'));
+        }
+      } catch (e) {
+        if (/Account suspended/.test(e.message)) throw e;
+        // profile fetch failed (missing row) — allow, ensureProfile repairs it
+      }
       return data;
     },
 
@@ -91,6 +145,8 @@
     /* ---------- LOGOUT ---------- */
     async logout(redirect = '/') {
       this._ensured = false;
+      this._banChecked = false;
+      this._banned = false;
       await window.sb.auth.signOut();
       window.location.href = redirect;
     },
