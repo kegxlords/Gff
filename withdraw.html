@@ -19,8 +19,8 @@
     .bal-strip span { font-size:12px; opacity:.8; font-weight:600; }
     .bal-strip strong { display:block; font-family:'Fraunces',serif; font-size:24px; font-weight:800; margin-top:2px; }
     .bal-strip .fee-note { text-align:right; font-size:10.5px; opacity:.85; line-height:1.5; font-weight:600; }
+    .sched-banner { background:rgba(255,215,0,.1); border:1px solid rgba(212,175,55,.35); color:#8a6d00; border-radius:14px; padding:12px 16px; font-size:12px; font-weight:700; margin-bottom:14px; line-height:1.6; }
     .pend-banner { background:#FFF8E1; border:1px solid rgba(212,175,55,.35); color:#B8860B; border-radius:14px; padding:12px 16px; font-size:12.5px; font-weight:700; margin-bottom:14px; display:none; }
-    .gw-note { background:rgba(0,51,160,.04); border:1px solid rgba(0,51,160,.1); border-radius:14px; padding:12px 14px; font-size:11.5px; color:var(--gff-blue); line-height:1.6; margin-bottom:16px; }
     .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:16px; backdrop-filter:blur(10px); }
     .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
     .f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
@@ -53,39 +53,37 @@
       <div><span>Available Balance</span><strong id="wdBalance">0 CFA</strong></div>
       <div class="fee-note" id="feeNote">15% charge<br>applies per withdrawal</div>
     </div>
-    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending admin approval. Please wait for it to be processed.</div>
+    <div class="sched-banner rise d1" id="schedBanner">📅 Loading payout schedule…</div>
+    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending. Please wait for the next payout window.</div>
 
-    <div id="wdPane">
-      <div class="gw-note rise d1">📋 Submit a withdrawal request. Admin will review and process it within 24 hours via Mobile Money or bank transfer.</div>
-      <div class="form-card rise d2">
-        <label class="f-lbl">Amount to Withdraw (CFA) — min 1,000</label>
-        <input class="f-inp" id="insAmount" type="number" min="1000" placeholder="e.g. 10000" oninput="insSummary()" />
-        <div class="f-row">
-          <div>
-            <label class="f-lbl">Country</label>
-            <select class="f-inp" id="insCountry" onchange="insCountryChanged()">
-              <option value="CM">🇨🇲 Cameroon</option>
-              <option value="CI">🇨🇮 Côte d'Ivoire</option>
-              <option value="SN">🇸 Senegal</option>
-            </select>
-          </div>
-          <div id="opWrap">
-            <label class="f-lbl">Operator</label>
-            <select class="f-inp" id="insOperator">
-              <option value="mtn">MTN MoMo</option>
-              <option value="orange">Orange Money</option>
-            </select>
-          </div>
+    <div class="form-card rise d2">
+      <label class="f-lbl">Amount to Withdraw (CFA) — min 1,000</label>
+      <input class="f-inp" id="insAmount" type="number" min="1000" placeholder="e.g. 10000" oninput="insSummary()" />
+      <div class="f-row">
+        <div>
+          <label class="f-lbl">Country</label>
+          <select class="f-inp" id="insCountry" onchange="insCountryChanged()">
+            <option value="CM">🇨🇲 Cameroon</option>
+            <option value="CI">🇨🇮 Côte d'Ivoire</option>
+            <option value="SN">🇸🇳 Senegal</option>
+          </select>
         </div>
-        <label class="f-lbl">Recipient Mobile Number</label>
-        <input class="f-inp" id="insPhone" placeholder="237XXXXXXXXX" inputmode="tel" />
-        <label class="f-lbl">Recipient Name (must match account)</label>
-        <input class="f-inp" id="insName" placeholder="Full name on account" />
-        <div class="sum-row"><span>Fee (<span id="insFeePct">15</span>%)</span><strong class="red" id="insFee">—</strong></div>
-        <div class="sum-row last"><span>Recipient Receives</span><strong class="green" id="insNet">—</strong></div>
-        <button class="wd-go" id="insBtn" onclick="submitWithdrawal()">📤 Submit Withdrawal Request</button>
-        <div class="wd-note">Your request will be reviewed by admin. Balance is reserved until approved or rejected.</div>
+        <div id="opWrap">
+          <label class="f-lbl">Operator</label>
+          <select class="f-inp" id="insOperator">
+            <option value="mtn">MTN MoMo</option>
+            <option value="orange">Orange Money</option>
+          </select>
+        </div>
       </div>
+      <label class="f-lbl">Recipient Mobile Number</label>
+      <input class="f-inp" id="insPhone" placeholder="237XXXXXXXXX" inputmode="tel" />
+      <label class="f-lbl">Recipient Name (must match account)</label>
+      <input class="f-inp" id="insName" placeholder="Full name on account" />
+      <div class="sum-row"><span>Fee (<span id="insFeePct">15</span>%)</span><strong class="red" id="insFee">—</strong></div>
+      <div class="sum-row last"><span>Recipient Receives</span><strong class="green" id="insNet">—</strong></div>
+      <button class="wd-go" id="insBtn" onclick="submitWithdrawal()">📤 Submit Withdrawal Request</button>
+      <div class="wd-note">Requests are processed manually by admin in the next payout window.</div>
     </div>
 
     <h3 class="sec-title rise d3">My Withdrawal Requests</h3>
@@ -115,7 +113,6 @@
       document.getElementById('insNet').textContent = fmt(amt - fee);
     }
 
-    // ===== SUBMIT TO ADMIN QUEUE (recipient details travel with the request) =====
     async function submitWithdrawal() {
       const btn = document.getElementById('insBtn');
       const amt = Number(document.getElementById('insAmount').value);
@@ -128,25 +125,18 @@
       if (amt > BALANCE) return AradelAuth.toast('Insufficient balance', 'error');
       if (!mobile) return AradelAuth.toast('Enter recipient mobile number', 'error');
       if (!name) return AradelAuth.toast('Enter recipient name', 'error');
-      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\n\nAdmin will review within 24 hours.`)) return;
+      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\nIt will be processed in the next payout window.`)) return;
 
       btn.disabled = true; btn.textContent = 'Submitting...';
       try {
         const r = await fetch('/api/withdraw/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: UID,
-            amount: amt,
-            recipient_name: name,
-            recipient_mobile: mobile,
-            country_code,
-            operator
-          })
+          body: JSON.stringify({ user_id: UID, amount: amt, recipient_name: name, recipient_mobile: mobile, country_code, operator })
         });
         const d = await r.json();
         if (!d.ok) throw new Error(d.error);
-        AradelAuth.toast('📤 Request submitted — admin will review');
+        AradelAuth.toast('📤 Queued for next payout window');
         setTimeout(() => location.href = '/transaction-history', 1400);
       } catch (e) {
         AradelAuth.toast(e.message, 'error');
@@ -162,7 +152,12 @@
       if (!txs || !txs.length) { list.innerHTML = '<div style="text-align:center;color:var(--pf-mut);font-size:13px;padding:14px;">No withdrawal requests yet.</div>'; return; }
       list.innerHTML = txs.map(t => `
         <div class="dep-row">
-          <div><div class="dep-amt">${fmt(t.amount)}</div><div class="dep-sub">To: ${t.recipient_mobile || '—'} • Net ${fmt(t.net_amount)}<br>${new Date(t.created_at).toLocaleString()}</div></div>
+          <div>
+            <div class="dep-amt">${fmt(t.amount)}</div>
+            <div class="dep-sub">To: ${t.recipient_mobile || '—'} • Net ${fmt(t.net_amount)}<br>
+              ${t.scheduled_for ? '📅 Payout: ' + new Date(t.scheduled_for).toLocaleString() : ''}<br>
+              ${new Date(t.created_at).toLocaleString()}</div>
+            </div>
           <span class="st ${t.status}">${t.status.toUpperCase()}</span>
         </div>`).join('');
       if (txs.some(t => t.status === 'pending')) document.getElementById('pendBanner').style.display = 'block';
@@ -178,6 +173,7 @@
         FEE_PCT = Number(st.withdrawal_fee_percent ?? 15);
         document.getElementById('feeNote').innerHTML = FEE_PCT + '% charge<br>applies per withdrawal';
         document.getElementById('insFeePct').textContent = FEE_PCT;
+        document.getElementById('schedBanner').innerHTML = '📅 <b>Payout Schedule:</b> ' + (st.withdrawal_schedule_text || 'Mondays & Thursdays, 5:00 PM') + '. Requests are queued automatically for the next window.';
         if (st.otpay_country) document.getElementById('insCountry').value = st.otpay_country;
       }
       insCountryChanged(); insSummary();
