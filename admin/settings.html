@@ -38,17 +38,19 @@
       <button class="adm-go" onclick="saveSettings()">💾 Save Platform Settings</button>
     </div>
 
-    <!-- ================= PAYOUT SCHEDULE ================= -->
-    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">📅 Payout Schedule</h2>
+    <!-- ================= WITHDRAWAL WINDOW ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">📅 Withdrawal Window</h2>
     <div class="adm-card">
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Schedule Text (shown to users)</label>
-      <input class="adm-input" id="setSchedText" placeholder="Mondays & Thursdays, 5:00 PM (WAT)" />
-      <label class="adm-sub" style="display:block;margin-bottom:6px;">Payout Days (0=Sun, 1=Mon … 6=Sat — comma separated)</label>
-      <input class="adm-input" id="setSchedDays" placeholder="1,4" oninput="previewNext()" />
-      <label class="adm-sub" style="display:block;margin-bottom:6px;">Payout Hour (UTC, 0–23)</label>
-      <input class="adm-input" id="setSchedHour" type="number" min="0" max="23" placeholder="17" oninput="previewNext()" />
-      <div class="adm-sub" id="nextPreview" style="margin-bottom:10px;"></div>
-      <button class="adm-go" onclick="saveSchedule()">💾 Save Schedule</button>
+      <input class="adm-input" id="setSchedText" placeholder="Every day, 9:00 AM - 6:00 PM" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Open Hour (local, 0–23)</label>
+      <input class="adm-input" id="setOpenHour" type="number" min="0" max="23" placeholder="9" oninput="previewWindow()" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Close Hour (local, 0–23)</label>
+      <input class="adm-input" id="setCloseHour" type="number" min="0" max="23" placeholder="18" oninput="previewWindow()" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Timezone Offset from UTC (WAT = 1)</label>
+      <input class="adm-input" id="setTzOffset" type="number" min="-12" max="14" placeholder="1" oninput="previewWindow()" />
+      <div class="adm-sub" id="windowPreview" style="margin-bottom:10px;"></div>
+      <button class="adm-go" onclick="saveSchedule()">💾 Save Withdrawal Window</button>
     </div>
 
     <!-- ================= OTPAY GATEWAY ================= -->
@@ -64,8 +66,8 @@
       </select>
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Country</label>
       <select class="adm-input" id="setOtpayCountry">
-        <option value="CM">🇨 Cameroon (XAF)</option>
-        <option value="CI">🇨 Côte d'Ivoire (XOF)</option>
+        <option value="CM">🇨🇲 Cameroon (XAF)</option>
+        <option value="CI">🇨🇮 Côte d'Ivoire (XOF)</option>
         <option value="SN">🇸🇳 Senegal (XOF)</option>
         <option value="NG">🇳🇬 Nigeria (NGN)</option>
         <option value="GH">🇬🇭 Ghana (GHS)</option>
@@ -100,7 +102,7 @@
         • Daily income auto-runs nightly at 23:00 UTC via Vercel cron.<br>
         • Fee & bonus changes apply to NEW requests instantly.<br>
         • Support links appear on /support and the dashboard welcome popup.<br>
-        • Withdrawal requests queue automatically for the next payout window; process each one manually (✓ Mark Paid) or via OTPay (⚡).<br>
+        • Withdrawals are open only during the daily window; requests are processed manually by admin.<br>
         • Switching test → live = change <b>OTPAY_MODE</b> env var + redeploy. No code changes, verification stays on.<br>
         • Duplicate callbacks, double refunds and double dispatches are all blocked server-side.
       </div>
@@ -116,6 +118,7 @@
   <script>
     let SESSION = null;
     const fmt = n => Number(n).toLocaleString() + ' CFA';
+    const pad2 = n => String(n).padStart(2, '0');
 
     async function adminGuard() {
       const s = await AradelAuth.getSession();
@@ -143,38 +146,35 @@
       AradelAuth.toast('Platform settings saved — live across the app');
     }
 
-    // ---------- PAYOUT SCHEDULE ----------
-    function previewNext() {
-      const days = String(document.getElementById('setSchedDays').value || '1,4').split(',').map(x => Number(x.trim())).filter(x => !isNaN(x));
-      const hour = Number(document.getElementById('setSchedHour').value || 17);
-      const now = new Date();
-      let next = null;
-      for (let i = 0; i < 8; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() + i);
-        if (days.includes(d.getDay())) {
-          d.setUTCHours(hour, 0, 0, 0);
-          if (d > now) { next = d; break; }
-        }
-      }
-      document.getElementById('nextPreview').innerHTML = next
-        ? '⏭ Next payout window: <b>' + next.toLocaleString() + '</b>'
-        : '⚠ Invalid days/hour — check values';
+    // ---------- WITHDRAWAL WINDOW ----------
+    function previewWindow() {
+      const off = Number(document.getElementById('setTzOffset').value || 1);
+      const openH = Number(document.getElementById('setOpenHour').value || 9);
+      const closeH = Number(document.getElementById('setCloseHour').value || 18);
+      const ln = new Date(Date.now() + off * 3600000);
+      const cur = ln.getUTCHours() + ln.getUTCMinutes() / 60;
+      const open = cur >= openH && cur < closeH;
+      document.getElementById('windowPreview').innerHTML = open
+        ? `🟢 Window currently <b>OPEN</b> (local ${pad2(ln.getUTCHours())}:${pad2(ln.getUTCMinutes())})`
+        : `🔴 Window currently <b>CLOSED</b> — opens at ${pad2(openH)}:00 local`;
     }
     async function saveSchedule() {
-      const daysRaw = String(document.getElementById('setSchedDays').value || '').trim();
-      const days = daysRaw.split(',').map(x => Number(x.trim())).filter(x => !isNaN(x) && x >= 0 && x <= 6);
-      if (!days.length) return AradelAuth.toast('Enter at least one valid day (0-6)', 'error');
-      const hour = Number(document.getElementById('setSchedHour').value);
-      if (isNaN(hour) || hour < 0 || hour > 23) return AradelAuth.toast('Hour must be 0–23', 'error');
+      const openH = Number(document.getElementById('setOpenHour').value);
+      const closeH = Number(document.getElementById('setCloseHour').value);
+      const off = Number(document.getElementById('setTzOffset').value);
+      if (isNaN(openH) || openH < 0 || openH > 23) return AradelAuth.toast('Open hour must be 0–23', 'error');
+      if (isNaN(closeH) || closeH < 0 || closeH > 23 || closeH <= openH) return AradelAuth.toast('Close hour must be after open hour', 'error');
+      if (isNaN(off) || off < -12 || off > 14) return AradelAuth.toast('Offset must be -12 to 14', 'error');
       const payload = {
-        withdrawal_schedule_text: document.getElementById('setSchedText').value.trim() || 'Mondays & Thursdays, 5:00 PM',
-        withdrawal_days: days.join(','),
-        withdrawal_hour: hour
+        withdrawal_schedule_text: document.getElementById('setSchedText').value.trim() || 'Every day, 9:00 AM - 6:00 PM',
+        withdrawal_open_hour: openH,
+        withdrawal_close_hour: closeH,
+        schedule_utc_offset: off,
+        withdrawal_days: '0,1,2,3,4,5,6'
       };
       const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
       if (error) return AradelAuth.toast(error.message, 'error');
-      AradelAuth.toast('Payout schedule saved');
+      AradelAuth.toast('Withdrawal window saved');
     }
 
     // ---------- OTPAY GATEWAY ----------
@@ -255,13 +255,14 @@
       document.getElementById('setTgSupport').value = s.telegram_support_url || '';
       document.getElementById('setWa').value = s.whatsapp_group_url || '';
       document.getElementById('setSchedText').value = s.withdrawal_schedule_text || '';
-      document.getElementById('setSchedDays').value = s.withdrawal_days || '1,4';
-      document.getElementById('setSchedHour').value = s.withdrawal_hour ?? 17;
+      document.getElementById('setOpenHour').value = s.withdrawal_open_hour ?? 9;
+      document.getElementById('setCloseHour').value = s.withdrawal_close_hour ?? 18;
+      document.getElementById('setTzOffset').value = s.schedule_utc_offset ?? 1;
       document.getElementById('setOtpayEnabled').value = String(s.otpay_enabled !== false);
       if (s.otpay_country) document.getElementById('setOtpayCountry').value = s.otpay_country;
       document.getElementById('setOtpayCurrency').value = s.otpay_currency || 'XAF';
       document.getElementById('cbUrl').value = location.origin + '/api/payments/otpay-callback';
-      previewNext();
+      previewWindow();
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
