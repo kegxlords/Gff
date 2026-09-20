@@ -23,6 +23,13 @@
     </nav>
 
     <h2 class="adm-title">Users</h2>
+
+    <div class="adm-stats">
+      <div class="adm-stat"><b id="cTotal">0</b><span>Total</span></div>
+      <div class="adm-stat"><b id="cBanned">0</b><span>Banned</span></div>
+      <div class="adm-stat"><b id="cAdmins">0</b><span>Admins</span></div>
+    </div>
+
     <input class="adm-input" id="search" placeholder="Search name, email or code..." oninput="render()" />
     <div id="list"></div>
   </div>
@@ -64,33 +71,33 @@
       AradelAuth.toast('Opened new tab as ' + (d.name || email));
     }
 
-    function render() {
-      const q = (document.getElementById('search').value || '').toLowerCase();
-      const items = USERS.filter(u =>
-        !q || (u.full_name || '').toLowerCase().includes(q) ||
-        (u.email || '').toLowerCase().includes(q) ||
-        (u.referral_code || '').toLowerCase().includes(q));
-
-      document.getElementById('list').innerHTML = items.length ? items.map(u => `
-        <div class="adm-card">
-          <div class="adm-row-top">
-            <div>
-              <div class="adm-name">${u.full_name} ${u.is_admin ? '👑' : ''}</div>
-              <div class="adm-sub">${u.email}<br>Code: ${u.referral_code} • VIP ${u.vip_level || 0}<br>Joined ${new Date(u.created_at).toLocaleDateString()}</div>
-            </div>
-            <div style="text-align:right;">
-              <div class="adm-amt">${fmt(u.wallet?.balance || 0)}</div>
-              <div class="adm-sub">Dep: ${fmt(u.wallet?.total_deposit || 0)}</div>
-            </div>
-          </div>
-          <div class="adm-actions">
-            <button class="adm-btn plain" onclick="loginAs('${u.email}')">👑 Login As</button>
-            <button class="adm-btn plain" onclick="adjust('${u.id}')">± Balance</button>
-            <button class="adm-btn plain" onclick="toggleAdmin('${u.id}', ${!!u.is_admin})">${u.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
-          </div>
-        </div>`).join('') : '<div class="adm-empty">No users found.</div>';
+    // ---------- BAN / UNBAN ----------
+    async function banUser(uid) {
+      const u = USERS.find(x => x.id === uid);
+      if (!u) return;
+      if (uid === SESSION.user.id) return AradelAuth.toast('You cannot ban yourself', 'error');
+      if (u.is_admin) return AradelAuth.toast('Remove admin rights first', 'error');
+      const reason = prompt('Ban reason (shown to the user):');
+      if (reason === null) return;
+      if (!reason.trim()) return AradelAuth.toast('Reason is required', 'error');
+      const { error } = await window.sb.from('users').update({
+        is_banned: true, ban_reason: reason.trim(), banned_at: new Date().toISOString()
+      }).eq('id', uid);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('🚫 User banned — kicked from all pages');
+      load();
+    }
+    async function unbanUser(uid) {
+      if (!confirm('Unban this user? They will regain full access immediately.')) return;
+      const { error } = await window.sb.from('users').update({
+        is_banned: false, ban_reason: null, banned_at: null
+      }).eq('id', uid);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('✅ User unbanned');
+      load();
     }
 
+    // ---------- BALANCE / ADMIN ----------
     async function adjust(uid) {
       const u = USERS.find(x => x.id === uid);
       const v = prompt('Adjust balance (e.g. +5000 or -2000):');
@@ -115,11 +122,46 @@
       load();
     }
 
+    // ---------- RENDER ----------
+    function render() {
+      const q = (document.getElementById('search').value || '').toLowerCase();
+      const items = USERS.filter(u =>
+        !q || (u.full_name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.referral_code || '').toLowerCase().includes(q));
+
+      document.getElementById('list').innerHTML = items.length ? items.map(u => `
+        <div class="adm-card" style="${u.is_banned ? 'border:1px solid rgba(220,20,60,.35);' : ''}">
+          <div class="adm-row-top">
+            <div>
+              <div class="adm-name">${u.full_name} ${u.is_admin ? '👑' : ''} ${u.is_banned ? '🚫' : ''}</div>
+              <div class="adm-sub">${u.email}<br>Code: ${u.referral_code} • VIP ${u.vip_level || 0}<br>Joined ${new Date(u.created_at).toLocaleDateString()}</div>
+              ${u.is_banned ? `<div class="adm-sub" style="margin-top:6px;color:#B01030;font-weight:700;">🚫 Banned ${u.banned_at ? new Date(u.banned_at).toLocaleDateString() : ''}: ${u.ban_reason || 'No reason given'}</div>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div class="adm-amt">${fmt(u.wallet?.balance || 0)}</div>
+              <div class="adm-sub">Dep: ${fmt(u.wallet?.total_deposit || 0)}</div>
+            </div>
+          </div>
+          <div class="adm-actions">
+            ${u.is_banned
+              ? `<button class="adm-btn ok" onclick="unbanUser('${u.id}')">✅ Unban</button>`
+              : `<button class="adm-btn no" onclick="banUser('${u.id}')">🚫 Ban</button>`}
+            <button class="adm-btn plain" onclick="loginAs('${u.email}')">👑 Login As</button>
+            <button class="adm-btn plain" onclick="adjust('${u.id}')">± Balance</button>
+            <button class="adm-btn plain" onclick="toggleAdmin('${u.id}', ${!!u.is_admin})">${u.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
+          </div>
+        </div>`).join('') : '<div class="adm-empty">No users found.</div>';
+    }
+
     async function load() {
       const { data: users } = await window.sb.from('users').select('*').order('created_at', { ascending: false });
       const { data: wallets } = await window.sb.from('wallets').select('*');
       const wm = {}; (wallets || []).forEach(w => wm[w.user_id] = w);
       USERS = (users || []).map(u => ({ ...u, wallet: wm[u.id] }));
+      document.getElementById('cTotal').textContent = USERS.length;
+      document.getElementById('cBanned').textContent = USERS.filter(u => u.is_banned).length;
+      document.getElementById('cAdmins').textContent = USERS.filter(u => u.is_admin).length;
       render();
     }
 
