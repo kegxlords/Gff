@@ -1,5 +1,18 @@
-// api/withdraw/create.js — user submits withdrawal request (admin queue)
+// api/withdraw/create.js — manual withdrawal request, queued to next scheduled payout
 const { createClient } = require('@supabase/supabase-js');
+
+function nextPayoutDate(daysArr, hour) {
+  const now = new Date();
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    if (daysArr.includes(d.getDay())) {
+      d.setUTCHours(Number(hour) || 17, 0, 0, 0);
+      if (d > now) return d.toISOString();
+    }
+  }
+  return null;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,30 +32,26 @@ module.exports = async function handler(req, res) {
     if (!recipient_name || !String(recipient_name).trim()) return res.status(400).json({ ok: false, error: 'Recipient name is required' });
     if (!recipient_mobile || !String(recipient_mobile).trim()) return res.status(400).json({ ok: false, error: 'Recipient mobile number is required' });
 
-    // One pending withdrawal at a time
     const { count } = await supabase.from('withdrawal_requests')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user_id).eq('status', 'pending');
     if (count > 0) return res.status(400).json({ ok: false, error: 'You already have a pending withdrawal request' });
 
-    // Balance check
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user_id).single();
-    if (!wallet || Number(wallet.balance) < amt) {
-      return res.status(400).json({ ok: false, error: 'Insufficient balance' });
-    }
+    if (!wallet || Number(wallet.balance) < amt) return res.status(400).json({ ok: false, error: 'Insufficient balance' });
 
-    // Dynamic fee from platform settings
-    const { data: settings } = await supabase.from('platform_settings').select('withdrawal_fee_percent').eq('id', 1).single();
+    const { data: settings } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
     const feePct = Number(settings?.withdrawal_fee_percent ?? 15);
     const fee = Math.round(amt * feePct / 100);
     const net = amt - fee;
-    const newBalance = Number(wallet.balance) - amt;
 
-    // Deduct immediately (refunded if rejected)
+    const daysArr = String(settings?.withdrawal_days || '1,4').split(',').map(x => Number(x.trim())).filter(x => !isNaN(x));
+    const scheduled_for = nextPayoutDate(daysArr, settings?.withdrawal_hour);
+
+    const newBalance = Number(wallet.balance) - amt;
     await supabase.from('wallets').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', user_id);
 
-    // Create request WITH recipient details (bank card optional / legacy)
-    const { error } = await supabase.from('withdrawal_requests').insert({
+    const { data: newReq, error } = await supabase.from('withdrawal_requests').insert({
       user_id,
       bank_card_id: bank_card_id || null,
       amount: amt,
@@ -52,8 +61,9 @@ module.exports = async function handler(req, res) {
       recipient_name: String(recipient_name).trim(),
       recipient_mobile: String(recipient_mobile).replace(/\s/g, ''),
       country_code: country_code || 'CM',
-      operator: operator || null
-    });
+      operator: operator || null,
+      scheduled_for
+    }).select().single();
     if (error) throw error;
 
     await supabase.from('wallet_transactions').insert({
@@ -62,7 +72,7 @@ module.exports = async function handler(req, res) {
       balance_after: newBalance
     });
 
-    return res.status(200).json({ ok: true, message: 'Withdrawal submitted for admin review' });
+    return res.status(200).json({ ok: true, message: 'Withdrawal queued for next payout window', scheduled_for, request_id: newReq.id });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
