@@ -428,6 +428,9 @@ module.exports = async function handler(req, res) {
     const { data } = await supabase.auth.getUser(token);
     if (!data?.user) return res.status(401).json({ error: 'Unauthorized' });
 
+    // BAN enforcement (server-side — blocks API abuse too)
+    const { data: prof } = await supabase.from('users').select('is_banned').eq('id', data.user.id).single();
+    if (prof?.is_banned) return res.status(403).json({ error: 'Account suspended — contact support' }); 
     let result;
     switch (action) {
       case 'deposit-create': result = await depositCreate(supabase, data.user.id, req.body); break;
