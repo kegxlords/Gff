@@ -14,6 +14,9 @@ module.exports = async function handler(req, res) {
     const { user_id, bank_card_id, amount, recipient_name, recipient_mobile, country_code, operator } = req.body || {};
     const amt = Number(amount);
 
+    // BAN enforcement (server-side)
+    const { data: prof } = await supabase.from('users').select('is_banned').eq('id', user_id).single();
+    if (prof?.is_banned) return res.status(403).json({ ok: false, error: 'Account suspended — contact support' });
     if (!user_id) return res.status(400).json({ ok: false, error: 'User required' });
     if (!Number.isFinite(amt) || amt < 1000) return res.status(400).json({ ok: false, error: 'Minimum withdrawal is 1,000' });
     if (!recipient_name || !String(recipient_name).trim()) return res.status(400).json({ ok: false, error: 'Recipient name is required' });
