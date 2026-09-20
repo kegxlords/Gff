@@ -42,6 +42,13 @@ const COUNTRY = {
   CO: { currency: 'COP', re: /^57\d{10}$/, extras: { legalDocType: 'CC', type: 'AHORRO' } },
   MX: { currency: 'MXN', re: /^52\d{10}$/, extras: { type: '40' } }
 };
+// OTPay cashier/wallets use NATIONAL numbers (the +237 prefix is shown separately)
+const PREFIX = { CM: '237', CI: '225', SN: '221', NG: '234', GH: '233', CO: '57', MX: '52' };
+function national(cc, mobile) {
+  const m = String(mobile || '').replace(/\s/g, '');
+  const p = PREFIX[cc];
+  return p && m.startsWith(p) ? m.slice(p.length) : m;
+}
 function validateMobile(cc, mobile) {
   const c = COUNTRY[cc];
   if (!c) return { ok: false, error: `Unsupported country: ${cc}` };
@@ -58,7 +65,7 @@ function buildFundAccount(cc, r) {
   return fa;
 }
 
-// ---------- HTTP (15s hard timeout — never hang until Vercel kills us) ----------
+// ---------- HTTP (15s hard timeout) ----------
 async function post(path, body, timeoutMs = 15000, extraHeaders = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -89,14 +96,9 @@ async function get(path, timeoutMs = 15000) {
 async function creditDeposit({ supabase, user_id, amount, provider_ref, description }) {
   let { data: wallet, error } = await supabase.from('wallets').select('*').eq('user_id', user_id).maybeSingle();
 
-  // Auto-create wallet if missing (fixes "wallet not found")
   if (error || !wallet) {
     const { data: newWallet, error: insertErr } = await supabase.from('wallets').insert({
-      user_id,
-      balance: 0,
-      total_deposit: 0,
-      total_profit: 0,
-      total_referral_earnings: 0,
+      user_id, balance: 0, total_deposit: 0, total_profit: 0, total_referral_earnings: 0,
       updated_at: new Date().toISOString()
     }).select().single();
     if (insertErr) throw new Error('Failed to create wallet: ' + insertErr.message);
@@ -139,6 +141,7 @@ async function depositCreate(supabase, uid, b) {
 
   const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
   const method = b.operator || b.remark || (b.country_code === 'CM' ? 'mtn' : 'mobile');
+  const natMobile = national(b.country_code, b.mobile); // 9 digits for CM — cashier shows +237 itself
 
   const id = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const base = process.env.APP_URL || 'https://gff-ashy.vercel.app';
@@ -150,7 +153,7 @@ async function depositCreate(supabase, uid, b) {
       merchantId: CFG.merchantId, merchantOrderId: id, amount: fmtAmt(amt), currency: cur,
       remark: method, sign: signCreate(id, amt), payType: 1,
       notifyUrl: base + '/api/payments/otpay-callback', callbackUrl: base + '/payments/return',
-      firstName, lastName, mobile: b.mobile || '', email
+      firstName, lastName, mobile: natMobile, email
     });
   } catch (e) {
     log('otpay.deposit-create', e.timeout ? 'GATEWAY TIMEOUT 15s' : 'network error', { id, error: e.message });
@@ -217,6 +220,7 @@ async function withdrawCreate(supabase, uid, b) {
   const fee = Math.round(amt * feePct / 100);
   const net = amt - fee;
   const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
+  const natMobile = national(b.country_code, b.recipient.mobile);
 
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { count: pend } = await supabase.from('payment_transactions').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('kind', 'payout').in('status', ['pending', 'processing']).gte('created_at', since);
@@ -225,7 +229,7 @@ async function withdrawCreate(supabase, uid, b) {
   const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', uid).single();
   if (!wallet || Number(wallet.balance) < amt) return { status: 400, body: { error: 'Insufficient balance' } };
 
-  const fa = buildFundAccount(b.country_code, { name, email: b.recipient.email || '', mobile: b.recipient.mobile, bankCode: b.recipient.operator || b.country_code, accountNumber: b.recipient.mobile, idNumber: b.recipient.idNumber });
+  const fa = buildFundAccount(b.country_code, { name, email: b.recipient.email || '', mobile: natMobile, bankCode: b.recipient.operator || b.country_code, accountNumber: natMobile, idNumber: b.recipient.idNumber });
   if (b.country_code === 'CM' && b.recipient.operator) fa.bankAccount.extra.type = b.recipient.operator;
 
   const id = `wd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -331,7 +335,7 @@ async function adminCheck(supabase, req) {
   return profile?.is_admin ? data.user : null;
 }
 
-// ---------- ADMIN: VERIFY & CREDIT (query gateway, auto-credit if paid) ----------
+// ---------- ADMIN: VERIFY & CREDIT ----------
 async function adminDepositVerify(supabase, merchantOrderId) {
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
   if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
@@ -364,7 +368,7 @@ async function adminDepositVerify(supabase, merchantOrderId) {
   return { status: 200, body: { ok: false, message: 'Gateway still PENDING — nothing credited', gatewayStatus: q } };
 }
 
-// ---------- ADMIN: FORCE CREDIT (manual approve without gateway) ----------
+// ---------- ADMIN: FORCE CREDIT ----------
 async function adminDepositCredit(supabase, merchantOrderId) {
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
   if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
@@ -404,7 +408,7 @@ module.exports = async function handler(req, res) {
   const action = (req.body?.action || '').toString();
 
   try {
-    // ===== ADMIN ACTIONS (is_admin gated) =====
+    // ===== ADMIN ACTIONS =====
     if (action.startsWith('admin-')) {
       const admin = await adminCheck(supabase, req);
       if (!admin) return res.status(403).json({ error: 'Admin access required' });
