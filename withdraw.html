@@ -19,13 +19,23 @@
     .bal-strip span { font-size:12px; opacity:.8; font-weight:600; }
     .bal-strip strong { display:block; font-family:'Fraunces',serif; font-size:24px; font-weight:800; margin-top:2px; }
     .bal-strip .fee-note { text-align:right; font-size:10.5px; opacity:.85; line-height:1.5; font-weight:600; }
-    .sched-banner { background:rgba(255,215,0,.1); border:1px solid rgba(212,175,55,.35); color:#8a6d00; border-radius:14px; padding:12px 16px; font-size:12px; font-weight:700; margin-bottom:14px; line-height:1.6; }
+    .sched-banner { border-radius:14px; padding:12px 16px; font-size:12px; font-weight:700; margin-bottom:14px; line-height:1.6; }
+    .sched-banner.open { background:rgba(34,139,34,.08); border:1px solid rgba(34,139,34,.3); color:#1B6E1B; }
+    .sched-banner.closed { background:rgba(220,20,60,.06); border:1px solid rgba(220,20,60,.25); color:#B01030; }
     .pend-banner { background:#FFF8E1; border:1px solid rgba(212,175,55,.35); color:#B8860B; border-radius:14px; padding:12px 16px; font-size:12.5px; font-weight:700; margin-bottom:14px; display:none; }
     .form-card { background:var(--pf-card); border:1px solid var(--pf-line); border-radius:20px; padding:18px; margin-bottom:16px; backdrop-filter:blur(10px); }
     .f-lbl { font-size:11px; font-weight:700; color:var(--pf-mut); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; display:block; }
     .f-inp { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--pf-line); background:#fff; font-family:inherit; font-size:14px; margin-bottom:14px; color:var(--pf-txt); }
     .f-inp:focus { outline:none; border-color:var(--gff-blue); }
     .f-row { display:flex; gap:10px; } .f-row > * { flex:1; }
+    .wd-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .wd-amt { background:#fff; border:2px solid var(--pf-line); border-radius:16px; padding:13px; text-align:center; cursor:pointer; transition:all .2s; }
+    .wd-amt:active { transform:scale(.96); }
+    .wd-amt.sel { border-color:var(--gff-blue); background:rgba(0,51,160,.05); box-shadow:0 6px 16px rgba(0,51,160,.15); }
+    .wd-amt.off { opacity:.45; cursor:not-allowed; }
+    .wd-val { font-family:'Fraunces',serif; font-size:17px; font-weight:800; color:var(--gff-blue-dark); }
+    .wd-net { font-size:10.5px; color:var(--gff-green); font-weight:700; margin-top:4px; }
+    .wd-amt.off .wd-net { color:var(--pf-mut); }
     .sum-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(0,51,160,.06); font-size:13.5px; }
     .sum-row span { color:var(--pf-mut); font-weight:500; }
     .sum-row strong { font-weight:800; }
@@ -53,12 +63,14 @@
       <div><span>Available Balance</span><strong id="wdBalance">0 CFA</strong></div>
       <div class="fee-note" id="feeNote">15% charge<br>applies per withdrawal</div>
     </div>
-    <div class="sched-banner rise d1" id="schedBanner">📅 Loading payout schedule…</div>
-    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending. Please wait for the next payout window.</div>
+
+    <div class="sched-banner closed rise d1" id="schedBanner">📅 Loading schedule…</div>
+    <div class="pend-banner" id="pendBanner">⏳ You have a withdrawal pending. Please wait for it to be processed.</div>
 
     <div class="form-card rise d2">
-      <label class="f-lbl">Amount to Withdraw (CFA) — min 1,000</label>
-      <input class="f-inp" id="insAmount" type="number" min="1000" placeholder="e.g. 10000" oninput="insSummary()" />
+      <label class="f-lbl">Select Amount (CFA)</label>
+      <div class="wd-grid" id="wdGrid"></div>
+
       <div class="f-row">
         <div>
           <label class="f-lbl">Country</label>
@@ -80,10 +92,11 @@
       <input class="f-inp" id="insPhone" placeholder="237XXXXXXXXX" inputmode="tel" />
       <label class="f-lbl">Recipient Name (must match account)</label>
       <input class="f-inp" id="insName" placeholder="Full name on account" />
+
       <div class="sum-row"><span>Fee (<span id="insFeePct">15</span>%)</span><strong class="red" id="insFee">—</strong></div>
       <div class="sum-row last"><span>Recipient Receives</span><strong class="green" id="insNet">—</strong></div>
       <button class="wd-go" id="insBtn" onclick="submitWithdrawal()">📤 Submit Withdrawal Request</button>
-      <div class="wd-note">Requests are processed manually by admin in the next payout window.</div>
+      <div class="wd-note">Requests are processed manually by admin before the window closes.</div>
     </div>
 
     <h3 class="sec-title rise d3">My Withdrawal Requests</h3>
@@ -97,35 +110,85 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/components.js"></script>
   <script>
+    const FIXED = [1000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
     const HINTS = { CM: '237XXXXXXXXX', CI: '225XXXXXXXXX', SN: '221XXXXXXXXX' };
-    let UID = null, SESSION = null, BALANCE = 0, FEE_PCT = 15;
+    let UID = null, SESSION = null, BALANCE = 0, FEE_PCT = 15, SELECTED_AMT = null, WINDOW_OPEN = false;
+    let OPEN_H = 9, CLOSE_H = 18, TZ_OFF = 1, SCHED_TEXT = 'Every day, 9:00 AM - 6:00 PM';
     const fmt = n => Number(n).toLocaleString() + ' CFA';
+    const pad = n => String(n).padStart(2, '0');
+
+    // ---------- WINDOW LOGIC ----------
+    function localNow() { return new Date(Date.now() + TZ_OFF * 3600000); }
+    function windowState() {
+      const ln = localNow();
+      const cur = ln.getUTCHours() + ln.getUTCMinutes() / 60;
+      const open = cur >= OPEN_H && cur < CLOSE_H;
+      let info = '';
+      if (open) {
+        const minsLeft = Math.round((CLOSE_H - cur) * 60);
+        info = `🟢 OPEN now — closes in ${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m (at ${pad(CLOSE_H)}:00)`;
+      } else {
+        let hrsToOpen = OPEN_H - cur;
+        if (hrsToOpen < 0) hrsToOpen += 24;
+        const hm = Math.round(hrsToOpen * 60);
+        info = `🔴 CLOSED — opens in ${Math.floor(hm / 60)}h ${hm % 60}m (at ${pad(OPEN_H)}:00)`;
+      }
+      return { open, info };
+    }
+    function refreshWindow() {
+      const st = windowState();
+      WINDOW_OPEN = st.open;
+      const b = document.getElementById('schedBanner');
+      b.className = 'sched-banner ' + (st.open ? 'open' : 'closed');
+      b.innerHTML = `📅 <b>${SCHED_TEXT}</b><br>${st.info}`;
+      updateGo();
+    }
+
+    // ---------- AMOUNT GRID ----------
+    function renderGrid() {
+      document.getElementById('wdGrid').innerHTML = FIXED.map(a => {
+        const off = BALANCE < a;
+        const net = Math.round(a * (100 - FEE_PCT) / 100);
+        return `
+          <div class="wd-amt ${off ? 'off' : ''} ${SELECTED_AMT === a ? 'sel' : ''}" onclick="${off ? '' : 'selectAmt(' + a + ')'}">
+            <div class="wd-val">${fmt(a)}</div>
+            <div class="wd-net">${off ? 'Insufficient' : 'Receive ' + fmt(net)}</div>
+          </div>`;
+      }).join('');
+      updateSummary();
+      updateGo();
+    }
+    function selectAmt(a) { SELECTED_AMT = a; renderGrid(); }
+    function updateSummary() {
+      const amt = SELECTED_AMT || 0;
+      const fee = Math.round(amt * FEE_PCT / 100);
+      document.getElementById('insFee').textContent = amt ? '− ' + fmt(fee) : '—';
+      document.getElementById('insNet').textContent = amt ? fmt(amt - fee) : '—';
+    }
+    function updateGo() {
+      document.getElementById('insBtn').disabled = !(WINDOW_OPEN && SELECTED_AMT);
+    }
 
     function insCountryChanged() {
       const c = document.getElementById('insCountry').value;
       document.getElementById('opWrap').style.display = (c === 'CM') ? '' : 'none';
       document.getElementById('insPhone').placeholder = HINTS[c] || '';
     }
-    function insSummary() {
-      const amt = Number(document.getElementById('insAmount').value || 0);
-      const fee = Math.round(amt * FEE_PCT / 100);
-      document.getElementById('insFee').textContent = '− ' + fmt(fee);
-      document.getElementById('insNet').textContent = fmt(amt - fee);
-    }
 
+    // ---------- SUBMIT ----------
     async function submitWithdrawal() {
       const btn = document.getElementById('insBtn');
-      const amt = Number(document.getElementById('insAmount').value);
+      const amt = SELECTED_AMT;
       const country_code = document.getElementById('insCountry').value;
       const mobile = document.getElementById('insPhone').value.trim();
       const name = document.getElementById('insName').value.trim();
       const operator = (document.getElementById('insOperator') || {}).value || '';
 
-      if (!amt || amt < 1000) return AradelAuth.toast('Minimum withdrawal is 1,000 CFA', 'error');
-      if (amt > BALANCE) return AradelAuth.toast('Insufficient balance', 'error');
+      if (!amt) return AradelAuth.toast('Select an amount first', 'error');
+      if (!WINDOW_OPEN) return AradelAuth.toast(`Withdrawals open ${pad(OPEN_H)}:00 – ${pad(CLOSE_H)}:00 daily`, 'error');
       if (!mobile) return AradelAuth.toast('Enter recipient mobile number', 'error');
       if (!name) return AradelAuth.toast('Enter recipient name', 'error');
-      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\nIt will be processed in the next payout window.`)) return;
+      if (!confirm(`Submit withdrawal request for ${fmt(amt)} to ${mobile}?\nAdmin will process it before the window closes.`)) return;
 
       btn.disabled = true; btn.textContent = 'Submitting...';
       try {
@@ -136,14 +199,16 @@
         });
         const d = await r.json();
         if (!d.ok) throw new Error(d.error);
-        AradelAuth.toast('📤 Queued for next payout window');
+        AradelAuth.toast('📤 Request submitted — processing today');
         setTimeout(() => location.href = '/transaction-history', 1400);
       } catch (e) {
         AradelAuth.toast(e.message, 'error');
         btn.disabled = false; btn.textContent = '📤 Submit Withdrawal Request';
+        updateGo();
       }
     }
 
+    // ---------- LIST ----------
     async function loadRequests() {
       const { data: txs } = await window.sb.from('withdrawal_requests')
         .select('*').eq('user_id', UID)
@@ -155,9 +220,9 @@
           <div>
             <div class="dep-amt">${fmt(t.amount)}</div>
             <div class="dep-sub">To: ${t.recipient_mobile || '—'} • Net ${fmt(t.net_amount)}<br>
-              ${t.scheduled_for ? '📅 Payout: ' + new Date(t.scheduled_for).toLocaleString() : ''}<br>
+              ${t.scheduled_for ? '📅 Processed by: ' + new Date(t.scheduled_for).toLocaleString() : ''}<br>
               ${new Date(t.created_at).toLocaleString()}</div>
-            </div>
+          </div>
           <span class="st ${t.status}">${t.status.toUpperCase()}</span>
         </div>`).join('');
       if (txs.some(t => t.status === 'pending')) document.getElementById('pendBanner').style.display = 'block';
@@ -171,17 +236,23 @@
       const { data: st } = await window.sb.from('platform_settings').select('*').eq('id', 1).single();
       if (st) {
         FEE_PCT = Number(st.withdrawal_fee_percent ?? 15);
+        OPEN_H = Number(st.withdrawal_open_hour ?? 9);
+        CLOSE_H = Number(st.withdrawal_close_hour ?? 18);
+        TZ_OFF = Number(st.schedule_utc_offset ?? 1);
+        SCHED_TEXT = st.withdrawal_schedule_text || 'Every day, 9:00 AM - 6:00 PM';
         document.getElementById('feeNote').innerHTML = FEE_PCT + '% charge<br>applies per withdrawal';
         document.getElementById('insFeePct').textContent = FEE_PCT;
-        document.getElementById('schedBanner').innerHTML = '📅 <b>Payout Schedule:</b> ' + (st.withdrawal_schedule_text || 'Mondays & Thursdays, 5:00 PM') + '. Requests are queued automatically for the next window.';
         if (st.otpay_country) document.getElementById('insCountry').value = st.otpay_country;
       }
-      insCountryChanged(); insSummary();
+      insCountryChanged();
 
       const { data: wallet } = await window.sb.from('wallets').select('balance').eq('user_id', UID).single();
       BALANCE = wallet ? Number(wallet.balance) : 0;
       document.getElementById('wdBalance').textContent = fmt(BALANCE);
 
+      refreshWindow();
+      setInterval(refreshWindow, 30000); // live countdown
+      renderGrid();
       loadRequests();
     });
   </script>
