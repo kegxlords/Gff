@@ -52,7 +52,7 @@ function buildFundAccount(cc, r) {
   return fa;
 }
 
-// ---------- HTTP (15s hard timeout — never hang until Vercel kills us) ----------
+// ---------- HTTP (15s hard timeout) ----------
 async function post(path, body, timeoutMs = 15000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -107,7 +107,6 @@ async function depositCreate(supabase, uid, b) {
   if (!Number.isFinite(amt) || amt < 500) return { status: 400, body: { error: 'Minimum deposit is 500' } };
   if (b.country_code) { const v = validateMobile(b.country_code, b.mobile); if (!v.ok) return { status: 400, body: { error: v.error } }; }
 
-  // Email + name: from request, else from user profile (OTPay requires non-empty email)
   const { data: prof } = await supabase.from('users').select('email, full_name').eq('id', uid).single();
   const email = b.email || prof?.email || '';
   if (!email) return { status: 400, body: { error: 'Email required — contact support' } };
@@ -115,9 +114,7 @@ async function depositCreate(supabase, uid, b) {
   const firstName = b.firstName || nameParts[0] || 'Customer';
   const lastName = b.lastName || nameParts.slice(1).join(' ') || 'GFF';
 
-  // Currency derived from country (server-side truth)
   const cur = COUNTRY[b.country_code] ? COUNTRY[b.country_code].currency : (b.currency || 'XAF');
-  // remark = payment-method code (OTPay validates strictly in live mode)
   const method = b.operator || b.remark || (b.country_code === 'CM' ? 'mtn' : 'mobile');
 
   const id = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -183,7 +180,7 @@ async function depositQuery(supabase, uid, b) {
   return { status: 200, body: { ok: true, status: st, gatewayStatus: q } };
 }
 
-// ---------- WITHDRAW CREATE (request + debit + fee + payout in one) ----------
+// ---------- WITHDRAW CREATE ----------
 async function withdrawCreate(supabase, uid, b) {
   const amt = Number(b.amount);
   if (!Number.isFinite(amt) || amt < 1000) return { status: 400, body: { error: 'Minimum withdrawal is 1,000' } };
@@ -232,7 +229,6 @@ async function withdrawCreate(supabase, uid, b) {
   }
   log('otpay.withdraw-create', 'gateway response', { id, status: r.status, body: r.data });
 
-  // Gateway rejected at creation (incl. HTTP-200 error bodies with code != 0)
   const codeBad = r.data && r.data.code !== undefined && Number(r.data.code) !== 0;
   if (r.status !== 200 || !r.data || codeBad || r.data.status === 2) {
     const errMsg = (r.data?.error || r.data?.msg || 'Payout rejected') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '');
@@ -269,7 +265,7 @@ async function withdrawQuery(supabase, uid, b) {
     if (q === 1) {
       st = 'successful';
       if (tx.linked_request_id) await supabase.from('withdrawal_requests').update({ status: 'approved', admin_note: 'OTPay payout confirmed (query)' }).eq('id', tx.linked_request_id);
-} else if (q === 2) {
+    } else if (q === 2) {
       st = 'failed';
       if (tx.linked_request_id) {
         const { data: flipped } = await supabase.from('withdrawal_requests')
@@ -302,6 +298,67 @@ function countryValidate(b) {
   return { status: 200, body: { ok: true, currency: c.currency, requiresExtras: c.extras ? Object.keys(c.extras) : [] } };
 }
 
+// ---------- ADMIN DEPOSIT RESOLVE ACTIONS ----------
+async function adminCheck(supabase, req) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user) return null;
+  const { data: profile } = await supabase.from('users').select('is_admin').eq('id', data.user.id).single();
+  return profile?.is_admin ? data.user : null;
+}
+
+async function adminDepositVerify(supabase, merchantOrderId) {
+  const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
+  if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
+  if (tx.status !== 'pending') return { status: 400, body: { error: `Already ${tx.status}` } };
+
+  let r;
+  try {
+    r = await get(`/api/order/status?merchantId=${CFG.merchantId}&merchantOrderId=${encodeURIComponent(merchantOrderId)}`);
+  } catch (e) {
+    return { status: 502, body: { error: e.timeout ? 'Gateway timeout' : 'Network error' } };
+  }
+  if (r.status !== 200 || !r.data || r.data.code !== 0) {
+    return { status: 502, body: { error: 'Gateway query failed' } };
+  }
+
+  const q = r.data.data.status;
+  if (q === 1) {
+    const pa = Number(r.data.data.payAmount || tx.amount);
+    await creditDeposit({ supabase, user_id: tx.user_id, amount: pa, provider_ref: r.data.data.orderId, description: `OTPay deposit (admin verify) — ref ${r.data.data.orderId}` });
+    await supabase.from('payment_transactions').update({ status: 'paid', pay_amount: pa, provider_order_id: String(r.data.data.orderId || ''), updated_at: new Date().toISOString() }).eq('id', tx.id);
+    return { status: 200, body: { ok: true, message: 'Verified & credited', gatewayStatus: q } };
+  } else if (q === 2) {
+    await supabase.from('payment_transactions').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', tx.id);
+    return { status: 200, body: { ok: true, message: 'Gateway says FAILED — marked failed', gatewayStatus: q } };
+  } else if (q === 3) {
+    await supabase.from('payment_transactions').update({ status: 'refunded', updated_at: new Date().toISOString() }).eq('id', tx.id);
+    return { status: 200, body: { ok: true, message: 'Gateway says REFUNDED', gatewayStatus: q } };
+  }
+  return { status: 200, body: { ok: false, message: 'Gateway still PENDING', gatewayStatus: q } };
+}
+
+async function adminDepositCredit(supabase, merchantOrderId) {
+  const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
+  if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
+  if (tx.status !== 'pending') return { status: 400, body: { error: `Already ${tx.status}` } };
+
+  const pa = Number(tx.pay_amount || tx.amount);
+  await creditDeposit({ supabase, user_id: tx.user_id, amount: pa, provider_ref: tx.provider_order_id, description: `OTPay deposit (admin force-credit) — ref ${tx.provider_order_id}` });
+  await supabase.from('payment_transactions').update({ status: 'paid', pay_amount: pa, updated_at: new Date().toISOString() }).eq('id', tx.id);
+  return { status: 200, body: { ok: true, message: 'Force-credited without gateway confirmation' } };
+}
+
+async function adminDepositFail(supabase, merchantOrderId) {
+  const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
+  if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
+  if (tx.status !== 'pending') return { status: 400, body: { error: `Already ${tx.status}` } };
+
+  await supabase.from('payment_transactions').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', tx.id);
+  return { status: 200, body: { ok: true, message: 'Marked as failed' } };
+}
+
 // ---------- HANDLER ----------
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -318,6 +375,22 @@ module.exports = async function handler(req, res) {
   const action = (req.body?.action || '').toString();
 
   try {
+    // Admin actions
+    if (action.startsWith('admin-')) {
+      const admin = await adminCheck(supabase, req);
+      if (!admin) return res.status(403).json({ error: 'Admin access required' });
+
+      let result;
+      switch (action) {
+        case 'admin-deposit-verify': result = await adminDepositVerify(supabase, req.body.merchantOrderId); break;
+        case 'admin-deposit-credit': result = await adminDepositCredit(supabase, req.body.merchantOrderId); break;
+        case 'admin-deposit-fail': result = await adminDepositFail(supabase, req.body.merchantOrderId); break;
+        default: result = { status: 400, body: { error: 'Unknown admin action' } };
+      }
+      return res.status(result.status).json(result.body);
+    }
+
+    // User actions
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     const { data } = await supabase.auth.getUser(token);
     if (!data?.user) return res.status(401).json({ error: 'Unauthorized' });
