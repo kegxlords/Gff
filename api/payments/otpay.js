@@ -7,6 +7,12 @@ const CFG = MODE === 'live'
   ? { payUrl: process.env.OTPAY_LIVE_PAY_URL, merchantId: process.env.OTPAY_LIVE_MERCHANT_ID, appSecret: process.env.OTPAY_LIVE_APP_SECRET }
   : { payUrl: process.env.OTPAY_TEST_PAY_URL, merchantId: process.env.OTPAY_TEST_MERCHANT_ID, appSecret: process.env.OTPAY_TEST_APP_SECRET };
 
+// ---------- OPTIONAL STATIC-IP PROXY (payouts only; off unless env set) ----------
+const PROXY = process.env.PAYOUT_PROXY_URL || '';
+const PROXY_KEY = process.env.PAYOUT_PROXY_KEY || '';
+function payoutUrl(path) { return (PROXY && path.startsWith('/api/payout/')) ? PROXY + path : CFG.payUrl + path; }
+function payoutHeaders() { return (PROXY && PROXY_KEY) ? { 'X-Proxy-Key': PROXY_KEY } : {}; }
+
 // ---------- SIGNING (MD5 lowercase, 2-decimal amounts) ----------
 const md5 = s => crypto.createHash('md5').update(s, 'utf8').digest('hex').toLowerCase();
 function fmtAmt(n) { const x = Number(n); if (!Number.isFinite(x) || x < 0) throw new Error('Invalid amount'); return x.toFixed(2); }
@@ -52,12 +58,12 @@ function buildFundAccount(cc, r) {
   return fa;
 }
 
-// ---------- HTTP (15s hard timeout) ----------
-async function post(path, body, timeoutMs = 15000) {
+// ---------- HTTP (15s hard timeout — never hang until Vercel kills us) ----------
+async function post(path, body, timeoutMs = 15000, extraHeaders = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(CFG.payUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+    const res = await fetch(payoutUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', ...extraHeaders }, body: JSON.stringify(body), signal: ctrl.signal });
     const data = await res.json().catch(() => null);
     return { status: res.status, data };
   } catch (e) {
@@ -78,14 +84,31 @@ async function get(path, timeoutMs = 15000) {
   } finally { clearTimeout(timer); }
 }
 
-// ---------- CREDIT DEPOSIT (wallet + tx log + referral bonus) ----------
+// ---------- CREDIT DEPOSIT (wallet auto-create + tx log + referral bonus) ----------
+// wallets schema: user_id, balance, total_deposit, total_profit, total_referral_earnings, updated_at
 async function creditDeposit({ supabase, user_id, amount, provider_ref, description }) {
-  const { data: wallet, error } = await supabase.from('wallets').select('*').eq('user_id', user_id).single();
-  if (error) throw new Error('Wallet not found');
+  let { data: wallet, error } = await supabase.from('wallets').select('*').eq('user_id', user_id).maybeSingle();
+
+  // Auto-create wallet if missing (fixes "wallet not found")
+  if (error || !wallet) {
+    const { data: newWallet, error: insertErr } = await supabase.from('wallets').insert({
+      user_id,
+      balance: 0,
+      total_deposit: 0,
+      total_profit: 0,
+      total_referral_earnings: 0,
+      updated_at: new Date().toISOString()
+    }).select().single();
+    if (insertErr) throw new Error('Failed to create wallet: ' + insertErr.message);
+    wallet = newWallet;
+    log('otpay.creditDeposit', 'wallet auto-created', { user_id });
+  }
+
   const amt = Number(amount);
   const nb = Number(wallet.balance) + amt;
   await supabase.from('wallets').update({ balance: nb, total_deposit: Number(wallet.total_deposit || 0) + amt, updated_at: new Date().toISOString() }).eq('user_id', user_id);
   await supabase.from('wallet_transactions').insert({ user_id, type: 'deposit', amount: amt, description: description || 'Deposit credited', balance_after: nb });
+
   const { data: st } = await supabase.from('platform_settings').select('referral_bonus_percent').eq('id', 1).single();
   const pct = Number(st?.referral_bonus_percent ?? 22);
   const { data: user } = await supabase.from('users').select('referred_by').eq('id', user_id).single();
@@ -180,7 +203,7 @@ async function depositQuery(supabase, uid, b) {
   return { status: 200, body: { ok: true, status: st, gatewayStatus: q } };
 }
 
-// ---------- WITHDRAW CREATE ----------
+// ---------- WITHDRAW CREATE (request + debit + fee + payout in one) ----------
 async function withdrawCreate(supabase, uid, b) {
   const amt = Number(b.amount);
   if (!Number.isFinite(amt) || amt < 1000) return { status: 400, body: { error: 'Minimum withdrawal is 1,000' } };
@@ -222,7 +245,7 @@ async function withdrawCreate(supabase, uid, b) {
   log('otpay.withdraw-create', 'submitting', { uid, gross: amt, net, cur, id });
   let r;
   try {
-    r = await post('/api/payout/submit', { merchantId: CFG.merchantId, merchantOrderId: id, currency: cur, amount: fmtAmt(net), sign: signCreate(id, net), notifyUrl: base + '/api/payments/otpay-callback', fundAccount: fa });
+    r = await post('/api/payout/submit', { merchantId: CFG.merchantId, merchantOrderId: id, currency: cur, amount: fmtAmt(net), sign: signCreate(id, net), notifyUrl: base + '/api/payments/otpay-callback', fundAccount: fa }, 15000, payoutHeaders());
   } catch (e) {
     log('otpay.withdraw-create', e.timeout ? 'GATEWAY TIMEOUT 15s' : 'network error', { id, error: e.message });
     return { status: 502, body: { ok: false, ambiguous: true, merchantOrderId: id, error: e.timeout ? 'Gateway did not respond in 15s — check probe/whitelist' : 'Network error reaching gateway: ' + e.message } };
@@ -298,7 +321,7 @@ function countryValidate(b) {
   return { status: 200, body: { ok: true, currency: c.currency, requiresExtras: c.extras ? Object.keys(c.extras) : [] } };
 }
 
-// ---------- ADMIN DEPOSIT RESOLVE ACTIONS ----------
+// ---------- ADMIN CHECK ----------
 async function adminCheck(supabase, req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return null;
@@ -308,6 +331,7 @@ async function adminCheck(supabase, req) {
   return profile?.is_admin ? data.user : null;
 }
 
+// ---------- ADMIN: VERIFY & CREDIT (query gateway, auto-credit if paid) ----------
 async function adminDepositVerify(supabase, merchantOrderId) {
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
   if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
@@ -320,7 +344,7 @@ async function adminDepositVerify(supabase, merchantOrderId) {
     return { status: 502, body: { error: e.timeout ? 'Gateway timeout' : 'Network error' } };
   }
   if (r.status !== 200 || !r.data || r.data.code !== 0) {
-    return { status: 502, body: { error: 'Gateway query failed' } };
+    return { status: 502, body: { error: (r.data?.error || 'Gateway query failed') + (r.data?.code !== undefined ? ' [code ' + r.data.code + ']' : '') } };
   }
 
   const q = r.data.data.status;
@@ -328,6 +352,7 @@ async function adminDepositVerify(supabase, merchantOrderId) {
     const pa = Number(r.data.data.payAmount || tx.amount);
     await creditDeposit({ supabase, user_id: tx.user_id, amount: pa, provider_ref: r.data.data.orderId, description: `OTPay deposit (admin verify) — ref ${r.data.data.orderId}` });
     await supabase.from('payment_transactions').update({ status: 'paid', pay_amount: pa, provider_order_id: String(r.data.data.orderId || ''), updated_at: new Date().toISOString() }).eq('id', tx.id);
+    log('otpay.admin-verify', 'credited', { merchantOrderId, pa });
     return { status: 200, body: { ok: true, message: 'Verified & credited', gatewayStatus: q } };
   } else if (q === 2) {
     await supabase.from('payment_transactions').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', tx.id);
@@ -336,26 +361,30 @@ async function adminDepositVerify(supabase, merchantOrderId) {
     await supabase.from('payment_transactions').update({ status: 'refunded', updated_at: new Date().toISOString() }).eq('id', tx.id);
     return { status: 200, body: { ok: true, message: 'Gateway says REFUNDED', gatewayStatus: q } };
   }
-  return { status: 200, body: { ok: false, message: 'Gateway still PENDING', gatewayStatus: q } };
+  return { status: 200, body: { ok: false, message: 'Gateway still PENDING — nothing credited', gatewayStatus: q } };
 }
 
+// ---------- ADMIN: FORCE CREDIT (manual approve without gateway) ----------
 async function adminDepositCredit(supabase, merchantOrderId) {
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
   if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
   if (tx.status !== 'pending') return { status: 400, body: { error: `Already ${tx.status}` } };
 
   const pa = Number(tx.pay_amount || tx.amount);
-  await creditDeposit({ supabase, user_id: tx.user_id, amount: pa, provider_ref: tx.provider_order_id, description: `OTPay deposit (admin force-credit) — ref ${tx.provider_order_id}` });
+  await creditDeposit({ supabase, user_id: tx.user_id, amount: pa, provider_ref: tx.provider_order_id, description: `OTPay deposit (admin force-credit) — ref ${tx.provider_order_id || tx.merchant_order_id}` });
   await supabase.from('payment_transactions').update({ status: 'paid', pay_amount: pa, updated_at: new Date().toISOString() }).eq('id', tx.id);
+  log('otpay.admin-credit', 'force-credited', { merchantOrderId, pa });
   return { status: 200, body: { ok: true, message: 'Force-credited without gateway confirmation' } };
 }
 
+// ---------- ADMIN: MARK FAILED ----------
 async function adminDepositFail(supabase, merchantOrderId) {
   const { data: tx } = await supabase.from('payment_transactions').select('*').eq('merchant_order_id', merchantOrderId).eq('kind', 'deposit').single();
   if (!tx) return { status: 404, body: { error: 'Transaction not found' } };
   if (tx.status !== 'pending') return { status: 400, body: { error: `Already ${tx.status}` } };
 
-  await supabase.from('payment_transactions').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', tx.id);
+  await supabase.from('payment_transactions').update({ status: 'failed', last_error: 'Marked failed by admin', updated_at: new Date().toISOString() }).eq('id', tx.id);
+  log('otpay.admin-fail', 'marked failed', { merchantOrderId });
   return { status: 200, body: { ok: true, message: 'Marked as failed' } };
 }
 
@@ -375,7 +404,7 @@ module.exports = async function handler(req, res) {
   const action = (req.body?.action || '').toString();
 
   try {
-    // Admin actions
+    // ===== ADMIN ACTIONS (is_admin gated) =====
     if (action.startsWith('admin-')) {
       const admin = await adminCheck(supabase, req);
       if (!admin) return res.status(403).json({ error: 'Admin access required' });
@@ -390,7 +419,7 @@ module.exports = async function handler(req, res) {
       return res.status(result.status).json(result.body);
     }
 
-    // User actions
+    // ===== USER ACTIONS =====
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     const { data } = await supabase.auth.getUser(token);
     if (!data?.user) return res.status(401).json({ error: 'Unauthorized' });
