@@ -61,13 +61,19 @@
       const session = await AradelAuth.getSession();
       if (!session) { window.location.href = '/'; return; }
 
-      const res = await fetch('/api/team/commission', {
-        headers: { 'Authorization': 'Bearer ' + session.access_token }
-      });
-      const data = await res.json();
+      const { data: team, error } = await window.sb.rpc('get_team', { p_uid: session.user.id });
       const list = document.getElementById('tmList');
 
-      if (!data.ok || !data.referrals.length) {
+      if (error || !team || team.error) {
+        list.innerHTML = '<div class="tm-empty">Failed to load team data.<br>Please try again.</div>';
+        return;
+      }
+
+      document.getElementById('tmTotal').textContent = team.total_downlines;
+      document.getElementById('tmActive').textContent = team.active_downlines;
+      document.getElementById('tmEarn').textContent = fmt(team.referral_earnings);
+
+      if (!team.members || !team.members.length) {
         list.innerHTML = `
           <div class="tm-empty">No team members yet.<br>Share your referral code to start earning 22%!
             <br><button onclick="window.location.href='/refer'">Invite Friends</button>
@@ -75,20 +81,16 @@
         return;
       }
 
-      document.getElementById('tmTotal').textContent = data.stats.total_referrals;
-      document.getElementById('tmActive').textContent = data.stats.active_referrals;
-      document.getElementById('tmEarn').textContent = fmt(data.stats.total_commission);
-
-      list.innerHTML = data.referrals.map(r => `
+      list.innerHTML = team.members.map(r => `
         <div class="tm-card">
-          <div class="tm-av">${r.name.charAt(0).toUpperCase()}</div>
+          <div class="tm-av">${r.full_name.charAt(0).toUpperCase()}</div>
           <div class="tm-mid">
-            <div class="tm-name">${r.name}</div>
-            <div class="tm-sub">Joined ${new Date(r.joined).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} • Deposited ${fmt(r.deposited)}</div>
+            <div class="tm-name">${r.full_name}</div>
+            <div class="tm-sub">Joined ${new Date(r.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} • Deposited ${fmt(r.total_deposit)}${r.vip_level ? ' • VIP ' + r.vip_level : ''}</div>
           </div>
           <div class="tm-right">
             <div class="tm-comm">+${fmt(r.commission)}</div>
-            <span class="tm-st ${r.deposited > 0 ? 'active' : 'idle'}">${r.deposited > 0 ? 'ACTIVE' : 'NOT DEPOSITED'}</span>
+            <span class="tm-st ${r.active_plans > 0 ? 'active' : 'idle'}">${r.active_plans > 0 ? 'ACTIVE' : 'NOT INVESTED'}</span>
           </div>
         </div>`).join('');
     });
