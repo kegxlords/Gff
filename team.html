@@ -86,8 +86,8 @@
           <div class="tm-av">${r.full_name.charAt(0).toUpperCase()}</div>
           <div class="tm-mid">
             <div class="tm-name">${r.full_name}</div>
-            <div class="tm-sub">Joined ${new Date(r.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} • Deposited ${fmt(r.total_deposit)}${r.vip_level ? ' • VIP ' + r.vip_level : ''}</div>
-          </div>
+            <div class="tm-sub">Joined ${new Date(r.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} • Dep ${fmt(r.total_deposit)} • Inv ${fmt(r.invested)}${r.vip_level ? ' • VIP ' + r.vip_level : ''}</div>
+            </div>
           <div class="tm-right">
             <div class="tm-comm">+${fmt(r.commission)}</div>
             <span class="tm-st ${r.active_plans > 0 ? 'active' : 'idle'}">${r.active_plans > 0 ? 'ACTIVE' : 'NOT INVESTED'}</span>
