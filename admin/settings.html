@@ -240,9 +240,10 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
         body: JSON.stringify({ url })
       });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) { AradelAuth.toast('Endpoint missing — deploy api/admin/webhook-test.js', 'error'); return; }
       const d = await res.json();
-      AradelAuth.toast(d.ok ? `Sent — receiver returned HTTP ${d.status}` : d.error, d.ok ? 'success' : 'error');
-    }
+      AradelAuth.toast(d.ok ? `Sent — receiver returned HTTP ${d.status}` : d.error, d.ok ? 'success' : 'error');   }
 
     // ---------- GIFT CODES ----------
     async function createCode() {
