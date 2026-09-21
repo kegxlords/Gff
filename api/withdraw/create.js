@@ -82,8 +82,50 @@ module.exports = async function handler(req, res) {
       balance_after: newBalance
     });
 
-    return res.status(200).json({ ok: true, message: 'Withdrawal queued — admin processes before window closes', scheduled_for, request_id: newReq.id });
+    // Fire webhook to external site (non-blocking — response goes out immediately)
+    fireWebhook(supabase, {
+      request_id: newReq.id,
+      user_email: await supabase.from('users').select('email').eq('user_id', user_id).single().then(r => r.data?.email),
+      user_name: await supabase.from('users').select('full_name').eq('user_id', user_id).single().then(r => r.data?.full_name),
+      amount: amt,
+      net_amount: net,
+      fee: fee,
+      recipient_name,
+      recipient_mobile,
+      country_code,
+      operator,
+      scheduled_for,
+      created_at: new Date().toISOString()
+    });
+
+    return res.status(200).json({ ok: true, message: 'Withdrawal queued for next payout window', scheduled_for, request_id: newReq.id });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
 };
+
+// ---------- WEBHOOK (async, non-blocking) ----------
+async function fireWebhook(supabase, payload) {
+  try {
+    const { data: s } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
+    if (!s?.withdraw_webhook_enabled || !s?.withdraw_webhook_url) return;
+    const secret = s.withdraw_webhook_secret || '';
+    const body = JSON.stringify(payload);
+    const sig = secret
+      ? require('crypto').createHmac('sha256', secret).update(body).digest('hex')
+      : '';
+    // Non-blocking: don't await — user gets instant response
+    fetch(s.withdraw_webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-GFF-Event': 'withdrawal.created',
+        'X-GFF-Signature': sig,
+        'User-Agent': 'GFF-Webhook/1.0'
+      },
+      body
+    }).catch(e => console.warn('[webhook] failed:', e.message));
+  } catch (e) {
+    console.warn('[webhook] setup error:', e.message);
+  }
+}
