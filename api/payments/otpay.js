@@ -120,8 +120,7 @@ async function creditDeposit({ supabase, user_id, amount, provider_ref, descript
     if (rw) {
       const rb = Number(rw.balance) + comm;
       await supabase.from('wallets').update({ balance: rb, total_referral_earnings: Number(rw.total_referral_earnings || 0) + comm, updated_at: new Date().toISOString() }).eq('user_id', user.referred_by);
-      await supabase.from('wallet_transactions').insert({ user_id: user.referred_by, type: 'referral_bonus', amount: comm, description: pct + '% commission on downline deposit', balance_after: rb });
-    }
+      await supabase.from('wallet_transactions').insert({ user_id: user.referred_by, type: 'referral_bonus', amount: comm, description: pct + '% commission on downline deposit [' + user_id + ']', balance_after: rb });    }
   }
   return { newBalance: nb };
 }
