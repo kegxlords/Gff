@@ -66,7 +66,7 @@
       </select>
       <label class="adm-sub" style="display:block;margin-bottom:6px;">Default Country</label>
       <select class="adm-input" id="setOtpayCountry">
-        <option value="CM">🇨🇲 Cameroon (XAF)</option>
+        <option value="CM">🇨 Cameroon (XAF)</option>
         <option value="CI">🇨🇮 Côte d'Ivoire (XOF)</option>
         <option value="SN">🇸🇳 Senegal (XOF)</option>
         <option value="NG">🇳🇬 Nigeria (NGN)</option>
@@ -78,6 +78,26 @@
       <input class="adm-input" id="cbUrl" readonly style="background:#F3F4F6;color:#7A8699;" />
       <button class="adm-go" onclick="saveOtpay()">💾 Save Gateway Settings</button>
       <button class="adm-btn plain" style="width:100%;" onclick="copyCb()">📋 Copy Callback URL</button>
+    </div>
+
+    <!-- ================= WITHDRAWAL WEBHOOK ================= -->
+    <h2 class="adm-title" style="font-size:16px;margin-top:22px;">🔗 Withdrawal Webhook</h2>
+    <div class="adm-card">
+      <div class="adm-sub" style="margin-bottom:12px;">
+        Every user withdrawal request is POSTed to this URL as JSON (signed with HMAC-SHA256). Use it to forward details to another site, a CRM, Telegram bot, Zapier, or your back-office system.
+      </div>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Webhook URL</label>
+      <input class="adm-input" id="setWhUrl" placeholder="https://yoursite.com/webhook/gff-withdrawals" />
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Webhook Secret (for HMAC signature verification)</label>
+      <input class="adm-input" id="setWhSecret" placeholder="any long random string" />
+      <button class="adm-btn plain" style="margin-bottom:10px;" onclick="genSecret()">🎲 Generate Secret</button>
+      <label class="adm-sub" style="display:block;margin-bottom:6px;">Enabled</label>
+      <select class="adm-input" id="setWhEnabled">
+        <option value="true">✅ Enabled</option>
+        <option value="false">⛔ Disabled</option>
+      </select>
+      <button class="adm-go" onclick="saveWebhook()">💾 Save Webhook</button>
+      <button class="adm-btn plain" style="width:100%;margin-top:8px;" onclick="testWebhook()">🧪 Test Webhook (sends a dummy payload)</button>
     </div>
 
     <!-- ================= GIFT CODES ================= -->
@@ -103,6 +123,7 @@
         • Fee & bonus changes apply to NEW requests instantly.<br>
         • Support links appear on /support and the dashboard welcome popup.<br>
         • Withdrawals are open only during the daily window; requests are processed manually by admin.<br>
+        • Webhook fires on every user withdrawal submission (fire-and-forget — never blocks the user).<br>
         • Switching test → live = change <b>OTPAY_MODE</b> env var + redeploy. No code changes, verification stays on.<br>
         • Duplicate callbacks, double refunds and double dispatches are all blocked server-side.
       </div>
@@ -193,6 +214,36 @@
       navigator.clipboard ? navigator.clipboard.writeText(t).then(() => AradelAuth.toast('Callback URL copied')) : AradelAuth.toast(t);
     }
 
+    // ---------- WITHDRAWAL WEBHOOK ----------
+    function genSecret() {
+      const arr = new Uint8Array(24);
+      crypto.getRandomValues(arr);
+      document.getElementById('setWhSecret').value = Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+      AradelAuth.toast('Secret generated — remember to Save');
+    }
+    async function saveWebhook() {
+      const payload = {
+        withdraw_webhook_url: document.getElementById('setWhUrl').value.trim(),
+        withdraw_webhook_secret: document.getElementById('setWhSecret').value.trim(),
+        withdraw_webhook_enabled: document.getElementById('setWhEnabled').value === 'true'
+      };
+      const { error } = await window.sb.from('platform_settings').update(payload).eq('id', 1);
+      if (error) return AradelAuth.toast(error.message, 'error');
+      AradelAuth.toast('Webhook saved — fires on every new withdrawal request');
+    }
+    async function testWebhook() {
+      const url = document.getElementById('setWhUrl').value.trim();
+      if (!url) return AradelAuth.toast('Enter a URL first', 'error');
+      if (!confirm('Send a test payload to ' + url + '?')) return;
+      const res = await fetch('/api/admin/webhook-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+        body: JSON.stringify({ url })
+      });
+      const d = await res.json();
+      AradelAuth.toast(d.ok ? `Sent — receiver returned HTTP ${d.status}` : d.error, d.ok ? 'success' : 'error');
+    }
+
     // ---------- GIFT CODES ----------
     async function createCode() {
       const code = document.getElementById('gcCode').value.trim().toUpperCase();
@@ -262,6 +313,9 @@
       if (s.otpay_country) document.getElementById('setOtpayCountry').value = s.otpay_country;
       document.getElementById('setOtpayCurrency').value = s.otpay_currency || 'XAF';
       document.getElementById('cbUrl').value = location.origin + '/api/payments/otpay-callback';
+      document.getElementById('setWhUrl').value = s.withdraw_webhook_url || '';
+      document.getElementById('setWhSecret').value = s.withdraw_webhook_secret || '';
+      document.getElementById('setWhEnabled').value = String(s.withdraw_webhook_enabled === true);
       previewWindow();
     }
 
