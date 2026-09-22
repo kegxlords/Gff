@@ -1,4 +1,8 @@
-// api/payments/otpay-callback.js — OTPay webhook + external payout webhook receiver (dual-mode)
+// api/payments/otpay-callback.js
+// DUAL-MODE WEBHOOK RECEIVER
+//   MODE 1 (external): pcmedia.online etc. — UUID payload or X-GFF-Signature header, no OTPay sign
+//                      → approves / rejects+refunds withdrawal_requests (verbose logged)
+//   MODE 2 (otpay):    signature-verified deposit & payout callbacks (wallet credit, refunds)
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -7,7 +11,7 @@ const CFG = MODE === 'live'
   ? { merchantId: process.env.OTPAY_LIVE_MERCHANT_ID, appSecret: process.env.OTPAY_LIVE_APP_SECRET }
   : { merchantId: process.env.OTPAY_TEST_MERCHANT_ID, appSecret: process.env.OTPAY_TEST_APP_SECRET };
 
-// ---------- SIGNING / VERIFY ----------
+// ---------- SIGNING / VERIFY (OTPay mode only) ----------
 const md5 = s => crypto.createHash('md5').update(s, 'utf8').digest('hex').toLowerCase();
 const fmtAmt = n => Number(n).toFixed(2);
 const signCreate = (id, amt) => md5(`merchantId=${CFG.merchantId}&merchantOrderId=${id}&amount=${fmtAmt(amt)}&appSecret=${CFG.appSecret}`);
@@ -29,6 +33,7 @@ const safe200 = (res, msg) => res.status(200).json({ ok: true, msg });
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ---------- CREDIT DEPOSIT (wallet auto-create + referral bonus) ----------
+// wallets schema: user_id, balance, total_deposit, total_profit, total_referral_earnings, updated_at
 async function creditDeposit({ supabase, user_id, amount, provider_ref, description }) {
   let { data: wallet, error } = await supabase.from('wallets').select('*').eq('user_id', user_id).maybeSingle();
 
@@ -139,25 +144,40 @@ async function handleWithdraw(supabase, body, eventKey) {
   return 'processed';
 }
 
-// ---------- EXTERNAL PAYOUT WEBHOOK (pcmedia.online etc.) ----------
+// ---------- EXTERNAL PAYOUT WEBHOOK (pcmedia.online etc.) — VERBOSE, NO HMAC ----------
 async function handleExternalWebhook(req, res, supabase, externalId) {
   const body = req.body || {};
-  const requestId = externalId || body.request_id || body.id;
+  const requestId = externalId || body.request_id || body.id || body.withdrawal_id;
   const status = String(body.status || '').toLowerCase();
-  // Signature check removed by design — external callbacks accepted without HMAC
+  console.log('[external-webhook] routed', JSON.stringify({ requestId, status }));
+
+  if (!requestId) {
+    console.log('[external-webhook] NO ID in payload', JSON.stringify(body));
+    return res.status(400).json({ ok: false, error: 'request_id missing' });
+  }
 
   const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', requestId).single();
-  if (!request) return safe200(res, 'external: withdrawal not found');
+  if (!request) {
+    console.log('[external-webhook] withdrawal NOT FOUND', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: withdrawal not found' });
+  }
 
   const isPaid = ['paid', 'success', 'successful', '1', 'approved', 'completed'].includes(status);
   const isFailed = ['failed', 'rejected', 'error', '2', 'declined'].includes(status);
-  if (!isPaid && !isFailed) return safe200(res, 'external: status ignored');
-  if (request.status !== 'pending') return safe200(res, `external: already ${request.status}`);
+
+  if (!isPaid && !isFailed) {
+    console.log('[external-webhook] status ignored', JSON.stringify({ status }));
+    return res.status(200).json({ ok: true, msg: 'external: status ignored' });
+  }
+  if (request.status !== 'pending') {
+    console.log('[external-webhook] already settled', JSON.stringify({ requestId, current: request.status }));
+    return res.status(200).json({ ok: true, msg: `external: already ${request.status}` });
+  }
 
   if (isPaid) {
     await supabase.from('withdrawal_requests').update({ status: 'approved', admin_note: 'Auto-approved via external webhook' }).eq('id', requestId);
-    log('otpay.callback', 'external approved', { requestId });
-    return safe200(res, 'external: approved');
+    console.log('[external-webhook] APPROVED', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: approved' });
   }
 
   const { data: flipped } = await supabase.from('withdrawal_requests')
@@ -170,10 +190,11 @@ async function handleExternalWebhook(req, res, supabase, externalId) {
       await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', request.user_id);
       await supabase.from('wallet_transactions').insert({ user_id: request.user_id, type: 'withdrawal_refund', amount: Number(request.amount), description: 'External payout failed — refund via webhook', balance_after: nb });
     }
-    log('otpay.callback', 'external failed+refunded', { requestId });
-    return safe200(res, 'external: failed & refunded');
+    console.log('[external-webhook] FAILED+REFUNDED', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: failed & refunded' });
   }
-  return safe200(res, 'external: failed (already settled)');
+  console.log('[external-webhook] failed but already settled', JSON.stringify({ requestId }));
+  return res.status(200).json({ ok: true, msg: 'external: failed (already settled)' });
 }
 
 // ---------- HANDLER (dual-mode router) ----------
