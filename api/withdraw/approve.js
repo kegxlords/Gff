@@ -1,5 +1,6 @@
 // api/withdraw/approve.js
 // actions: approve = mark paid manually | dispatch = send via OTPay | reject = refund
+// + EXTERNAL WEBHOOK RECEIVER (pcmedia.online etc.) via X-GFF-Signature header
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -12,6 +13,7 @@ const md5 = s => crypto.createHash('md5').update(s, 'utf8').digest('hex').toLowe
 const fmtAmt = n => Number(n).toFixed(2);
 const signCreate = (id, amt) => md5(`merchantId=${CFG.merchantId}&merchantOrderId=${id}&amount=${fmtAmt(amt)}&appSecret=${CFG.appSecret}`);
 
+// ---------- OPTIONAL STATIC-IP PROXY (payouts only; off unless env set) ----------
 const PROXY = process.env.PAYOUT_PROXY_URL || '';
 const PROXY_KEY = process.env.PAYOUT_PROXY_KEY || '';
 function payoutUrl(path) { return (PROXY && path.startsWith('/api/payout/')) ? PROXY + path : CFG.payUrl + path; }
@@ -47,7 +49,7 @@ async function adminCheck(supabase, req) {
   return profile?.is_admin ? data.user : null;
 }
 
-// Single-winner refund: atomic flip pending|approved -> rejected
+// ---------- SINGLE-WINNER REFUND (atomic flip pending|approved -> rejected) ----------
 async function settleReject(supabase, requestId, adminNote, refundDescription) {
   const { data: flipped } = await supabase.from('withdrawal_requests')
     .update({ status: 'rejected', admin_note: adminNote })
@@ -67,14 +69,57 @@ async function settleReject(supabase, requestId, adminNote, refundDescription) {
   return { refunded: true, amount: Number(request.amount) };
 }
 
+// ---------- EXTERNAL WEBHOOK HANDLER (pcmedia.online etc.) ----------
+async function handleExternalWebhook(req, res, supabase) {
+  const body = req.body || {};
+  const requestId = body.request_id || body.id || body.withdrawal_id;
+  const status = String(body.status || '').toLowerCase();
+  // Signature check removed by design — external callbacks accepted without HMAC
+
+  if (!requestId) return res.status(400).json({ error: 'request_id missing' });
+
+  // 2. Fetch the withdrawal request
+  const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', requestId).single();
+  if (!request) return res.status(404).json({ error: 'Withdrawal not found' });
+
+  // 3. Process by status (idempotent — never double-approve / double-refund)
+  const isPaid = ['paid', 'success', 'successful', '1', 'approved', 'completed'].includes(status);
+  const isFailed = ['failed', 'rejected', 'error', '2', 'declined'].includes(status);
+
+  if (!isPaid && !isFailed) return res.status(200).json({ ok: true, msg: 'status pending/ignored' });
+  if (request.status !== 'pending') return res.status(200).json({ ok: true, msg: `already ${request.status}` });
+
+  if (isPaid) {
+    await supabase.from('withdrawal_requests').update({
+      status: 'approved',
+      admin_note: 'Auto-approved via external webhook'
+    }).eq('id', requestId);
+    console.log('[withdraw-callback] approved', { requestId });
+    return res.status(200).json({ ok: true, msg: 'approved' });
+  }
+
+  // failed → atomic flip + single guaranteed refund
+  const settle = await settleReject(supabase, requestId, 'Auto-rejected via external webhook (failed)', 'External payout failed — refund via webhook');
+  console.log('[withdraw-callback] failed+refunded', { requestId, refunded: settle.refunded });
+  return res.status(200).json({ ok: true, msg: settle.refunded ? 'failed & refunded' : 'failed (already settled)' });
+}
+
+// ---------- HANDLER ----------
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-GFF-Signature');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  // 🚀 EXTERNAL WEBHOOK INTERCEPTOR (bypasses admin check — signature-verified instead)
+  if (req.headers['x-gff-signature'] !== undefined ||
+      (req.body && (req.body.request_id || req.body.id) && req.body.status !== undefined && !req.body.action)) {
+    return handleExternalWebhook(req, res, supabase);
+  }
+
   const admin = await adminCheck(supabase, req);
   if (!admin) return res.status(403).json({ error: 'Admin access required' });
 
