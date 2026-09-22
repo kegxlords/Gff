@@ -26,7 +26,7 @@
 
     <div class="adm-stats">
       <div class="adm-stat"><b id="cPending">0</b><span>Pending</span></div>
-      <div class="adm-stat"><b id="cApproved">0</b><span>Paid/Approved</span></div>
+      <div class="adm-stat"><b id="cApproved">0</b><span>Approved/Sent</span></div>
       <div class="adm-stat"><b id="cRejected">0</b><span>Rejected</span></div>
     </div>
 
@@ -47,7 +47,12 @@
   <script>
     let SESSION = null, TAB = 'pending';
     const fmt = n => Number(n).toLocaleString() + ' CFA';
-    const GW_CLASS = { pending: 'pending', processing: 'pending', successful: 'approved', paid: 'approved', failed: 'rejected', refunded: 'rejected' };
+
+    const GW_CLASS = {
+      pending: 'pending', processing: 'pending',
+      successful: 'approved', paid: 'approved',
+      failed: 'rejected', refunded: 'rejected'
+    };
 
     async function adminGuard() {
       const s = await AradelAuth.getSession();
@@ -57,6 +62,7 @@
       return s;
     }
 
+    // ---------- APPROVE / DISPATCH / REJECT ----------
     async function act(id, action) {
       const msgs = {
         approve: 'Confirm you have PAID this user manually outside the system?',
@@ -74,6 +80,28 @@
       load();
     }
 
+    // ---------- SEND WEBHOOK (to pcmedia.online/bridge/withdrawal) ----------
+    async function sendWebhook(id) {
+      const url = 'https://pcmedia.online/bridge/withdrawal';
+      if (!confirm('Send this withdrawal to ' + url + '?')) return;
+      const res = await fetch('/api/admin/send-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SESSION.access_token },
+        body: JSON.stringify({ request_id: id, url })
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        AradelAuth.toast('Endpoint missing — deploy api/admin/send-webhook.js', 'error');
+        return;
+      }
+      const d = await res.json();
+      const msg = d.ok
+        ? `Sent → HTTP ${d.status} ${d.statusText || ''}`.trim()
+        : d.error;
+      AradelAuth.toast(msg, d.ok ? 'success' : 'error');
+    }
+
+    // ---------- LOAD ----------
     async function load() {
       const { count: cp } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       const { count: ca } = await window.sb.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'approved');
@@ -125,6 +153,7 @@
             <button class="adm-btn ok" onclick="act('${w.id}','approve')">✓ Mark Paid</button>
             <button class="adm-btn plain" onclick="act('${w.id}','dispatch')">⚡ OTPay</button>
             <button class="adm-btn no" onclick="act('${w.id}','reject')">✕ Refund</button>
+            <button class="adm-btn plain" style="width:100%;margin-top:8px;" onclick="sendWebhook('${w.id}')">🔗 Send Webhook</button>
           </div>` : ''}
         </div>`;
       }).join('');
