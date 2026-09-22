@@ -135,8 +135,7 @@
           <div class="adm-row-top">
             <div>
               <div class="adm-name">${u.full_name} ${u.is_admin ? '👑' : ''} ${u.is_banned ? '🚫' : ''}</div>
-              <div class="adm-sub">${u.email}<br>Code: ${u.referral_code} • VIP ${u.vip_level || 0}<br>Joined ${new Date(u.created_at).toLocaleDateString()}</div>
-              ${u.is_banned ? `<div class="adm-sub" style="margin-top:6px;color:#B01030;font-weight:700;">🚫 Banned ${u.banned_at ? new Date(u.banned_at).toLocaleDateString() : ''}: ${u.ban_reason || 'No reason given'}</div>` : ''}
+              <div class="adm-sub">${u.email}<br>📱 ${u.phone || 'No phone'} • Code: ${u.referral_code} • VIP ${u.vip_level || 0}<br>Joined ${new Date(u.created_at).toLocaleDateString()}</div>              ${u.is_banned ? `<div class="adm-sub" style="margin-top:6px;color:#B01030;font-weight:700;">🚫 Banned ${u.banned_at ? new Date(u.banned_at).toLocaleDateString() : ''}: ${u.ban_reason || 'No reason given'}</div>` : ''}
             </div>
             <div style="text-align:right;">
               <div class="adm-amt">${fmt(u.wallet?.balance || 0)}</div>
