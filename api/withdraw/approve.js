@@ -1,6 +1,6 @@
 // api/withdraw/approve.js
 // actions: approve = mark paid manually | dispatch = send via OTPay | reject = refund
-// + EXTERNAL WEBHOOK RECEIVER (pcmedia.online etc.) via X-GFF-Signature header
+// + EXTERNAL WEBHOOK RECEIVER (pcmedia.online etc.) — verbose logging, no HMAC required
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -26,6 +26,8 @@ const COUNTRY = {
   NG: { currency: 'NGN', re: /^234\d{10}$/ },
   GH: { currency: 'GHS', re: /^233\d{9}$/ }
 };
+const PREFIX = { CM: '237', CI: '225', SN: '221', NG: '234', GH: '233' };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function post(path, body, timeoutMs = 15000, extraHeaders = {}) {
   const ctrl = new AbortController();
@@ -69,39 +71,57 @@ async function settleReject(supabase, requestId, adminNote, refundDescription) {
   return { refunded: true, amount: Number(request.amount) };
 }
 
-// ---------- EXTERNAL WEBHOOK HANDLER (pcmedia.online etc.) ----------
-async function handleExternalWebhook(req, res, supabase) {
+// ---------- EXTERNAL WEBHOOK HANDLER (pcmedia.online etc.) — VERBOSE ----------
+async function handleExternalWebhook(req, res, supabase, externalId) {
   const body = req.body || {};
-  const requestId = body.request_id || body.id || body.withdrawal_id;
+  const requestId = externalId || body.request_id || body.id || body.withdrawal_id;
   const status = String(body.status || '').toLowerCase();
-  // Signature check removed by design — external callbacks accepted without HMAC
+  console.log('[external-webhook] routed', JSON.stringify({ requestId, status }));
 
-  if (!requestId) return res.status(400).json({ error: 'request_id missing' });
+  if (!requestId) {
+    console.log('[external-webhook] NO ID in payload', JSON.stringify(body));
+    return res.status(400).json({ ok: false, error: 'request_id missing' });
+  }
 
-  // 2. Fetch the withdrawal request
   const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', requestId).single();
-  if (!request) return res.status(404).json({ error: 'Withdrawal not found' });
+  if (!request) {
+    console.log('[external-webhook] withdrawal NOT FOUND', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: withdrawal not found' });
+  }
 
-  // 3. Process by status (idempotent — never double-approve / double-refund)
   const isPaid = ['paid', 'success', 'successful', '1', 'approved', 'completed'].includes(status);
   const isFailed = ['failed', 'rejected', 'error', '2', 'declined'].includes(status);
 
-  if (!isPaid && !isFailed) return res.status(200).json({ ok: true, msg: 'status pending/ignored' });
-  if (request.status !== 'pending') return res.status(200).json({ ok: true, msg: `already ${request.status}` });
-
-  if (isPaid) {
-    await supabase.from('withdrawal_requests').update({
-      status: 'approved',
-      admin_note: 'Auto-approved via external webhook'
-    }).eq('id', requestId);
-    console.log('[withdraw-callback] approved', { requestId });
-    return res.status(200).json({ ok: true, msg: 'approved' });
+  if (!isPaid && !isFailed) {
+    console.log('[external-webhook] status ignored', JSON.stringify({ status }));
+    return res.status(200).json({ ok: true, msg: 'external: status ignored' });
+  }
+  if (request.status !== 'pending') {
+    console.log('[external-webhook] already settled', JSON.stringify({ requestId, current: request.status }));
+    return res.status(200).json({ ok: true, msg: `external: already ${request.status}` });
   }
 
-  // failed → atomic flip + single guaranteed refund
-  const settle = await settleReject(supabase, requestId, 'Auto-rejected via external webhook (failed)', 'External payout failed — refund via webhook');
-  console.log('[withdraw-callback] failed+refunded', { requestId, refunded: settle.refunded });
-  return res.status(200).json({ ok: true, msg: settle.refunded ? 'failed & refunded' : 'failed (already settled)' });
+  if (isPaid) {
+    await supabase.from('withdrawal_requests').update({ status: 'approved', admin_note: 'Auto-approved via external webhook' }).eq('id', requestId);
+    console.log('[external-webhook] APPROVED', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: approved' });
+  }
+
+  const { data: flipped } = await supabase.from('withdrawal_requests')
+    .update({ status: 'rejected', admin_note: 'Auto-rejected via external webhook (failed)' })
+    .eq('id', requestId).in('status', ['pending', 'approved']).select();
+  if (flipped && flipped.length) {
+    const { data: w } = await supabase.from('wallets').select('*').eq('user_id', request.user_id).single();
+    if (w) {
+      const nb = Number(w.balance) + Number(request.amount);
+      await supabase.from('wallets').update({ balance: nb, updated_at: new Date().toISOString() }).eq('user_id', request.user_id);
+      await supabase.from('wallet_transactions').insert({ user_id: request.user_id, type: 'withdrawal_refund', amount: Number(request.amount), description: 'External payout failed — refund via webhook', balance_after: nb });
+    }
+    console.log('[external-webhook] FAILED+REFUNDED', JSON.stringify({ requestId }));
+    return res.status(200).json({ ok: true, msg: 'external: failed & refunded' });
+  }
+  console.log('[external-webhook] failed but already settled', JSON.stringify({ requestId }));
+  return res.status(200).json({ ok: true, msg: 'external: failed (already settled)' });
 }
 
 // ---------- HANDLER ----------
@@ -113,11 +133,15 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const body = req.body || {};
 
-  // 🚀 EXTERNAL WEBHOOK INTERCEPTOR (bypasses admin check — signature-verified instead)
-  if (req.headers['x-gff-signature'] !== undefined ||
-      (req.body && (req.body.request_id || req.body.id) && req.body.status !== undefined && !req.body.action)) {
-    return handleExternalWebhook(req, res, supabase);
+  // 🚀 EXTERNAL WEBHOOK INTERCEPTOR (bypasses admin check — UUID payload or signature header)
+  const sigHeader = req.headers['x-gff-signature'];
+  const externalId = body.request_id || body.withdrawal_id ||
+    (UUID_RE.test(String(body.merchantOrderId || '')) ? body.merchantOrderId : null) ||
+    (UUID_RE.test(String(body.id || '')) ? body.id : null);
+  if (sigHeader !== undefined || (externalId && !body.sign)) {
+    return handleExternalWebhook(req, res, supabase, externalId);
   }
 
   const admin = await adminCheck(supabase, req);
@@ -188,10 +212,7 @@ module.exports = async function handler(req, res) {
       if (!cinfo.re.test(mobileFull)) return res.status(400).json({ error: `Payout account "${mobileFull}" is not a valid ${cc} mobile-money number.` });
 
       // OTPay requires NATIONAL wallet numbers (9–10 digits) — strip country prefix for the gateway
-      const PREFIX = { CM: '237', CI: '225', SN: '221', NG: '234', GH: '233' };
-      const mobile = (PREFIX[cc] && mobileFull.startsWith(PREFIX[cc])) ? mobileFull.slice(PREFIX[cc].length) : mobileFull; const name = request.recipient_name || card?.account_name || 'Recipient';
-
-      if (!cinfo.re.test(mobile)) return res.status(400).json({ error: `Payout account "${mobile}" is not a valid ${cc} mobile-money number.` });
+      const mobile = (PREFIX[cc] && mobileFull.startsWith(PREFIX[cc])) ? mobileFull.slice(PREFIX[cc].length) : mobileFull;
 
       const amt = Number(request.net_amount);
       const id = `wd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
