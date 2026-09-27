@@ -1,8 +1,7 @@
 // api/payments/otpay-callback.js
 // DUAL-MODE WEBHOOK RECEIVER
 //   MODE 1 (external): pcmedia.online etc. — UUID payload or X-GFF-Signature header, no OTPay sign
-//                      → approves / rejects+refunds withdrawal_requests (verbose logged)
-//   MODE 2 (otpay):    signature-verified deposit & payout callbacks (wallet credit, refunds)
+//   MODE 2 (otpay):    signature-verified deposit & payout callbacks
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -144,12 +143,15 @@ async function handleWithdraw(supabase, body, eventKey) {
   return 'processed';
 }
 
-// ---------- EXTERNAL PAYOUT WEBHOOK (pcmedia.online etc.) — VERBOSE, NO HMAC ----------
+// ---------- EXTERNAL PAYOUT WEBHOOK (pcmedia.online etc.) — VERBOSE ----------
 async function handleExternalWebhook(req, res, supabase, externalId) {
   const body = req.body || {};
   const requestId = externalId || body.request_id || body.id || body.withdrawal_id;
-  const status = String(body.status || '').toLowerCase();
-  console.log('[external-webhook] routed', JSON.stringify({ requestId, status }));
+  const rawStatus = body.status ?? body.state ?? body.result ?? body.payment_status ??
+    body.tx_status ?? body.txStatus ?? body.paymentStatus ?? body.order_status ?? body.orderStatus ??
+    (body.data ? (body.data.status ?? body.data.state) : undefined) ?? '';
+  const status = String(rawStatus).toLowerCase();
+  console.log('[external-webhook] routed', JSON.stringify({ requestId, status, keys: Object.keys(body) }));
 
   if (!requestId) {
     console.log('[external-webhook] NO ID in payload', JSON.stringify(body));
@@ -162,11 +164,11 @@ async function handleExternalWebhook(req, res, supabase, externalId) {
     return res.status(200).json({ ok: true, msg: 'external: withdrawal not found' });
   }
 
-  const isPaid = ['paid', 'success', 'successful', '1', 'approved', 'completed'].includes(status);
-  const isFailed = ['failed', 'rejected', 'error', '2', 'declined'].includes(status);
+  const isPaid = ['paid', 'payed', 'success', 'successful', '1', 'approved', 'completed', 'complete', 'done', 'ok', 'credited'].includes(status);
+  const isFailed = ['failed', 'failure', 'rejected', 'reject', 'error', '2', 'declined', 'cancelled', 'canceled', 'refunded', 'expired'].includes(status);
 
   if (!isPaid && !isFailed) {
-    console.log('[external-webhook] status ignored', JSON.stringify({ status }));
+    console.log('[external-webhook] status ignored — FULL BODY:', JSON.stringify(body));
     return res.status(200).json({ ok: true, msg: 'external: status ignored' });
   }
   if (request.status !== 'pending') {
