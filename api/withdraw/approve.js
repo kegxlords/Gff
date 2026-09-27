@@ -181,8 +181,15 @@ module.exports = async function handler(req, res) {
       const cinfo = COUNTRY[cc] || COUNTRY.CM;
       const bankName = (card?.bank_name || '').toUpperCase();
       const operator = request.operator || (bankName.includes('ORANGE') ? 'orange' : bankName.includes('MTN') ? 'mtn' : (cc === 'CM' ? 'mtn' : cc.toLowerCase()));
-      const mobile = (request.recipient_mobile || card?.account_number || '').replace(/\s/g, '');
+      const mobileFull = (request.recipient_mobile || card?.account_number || '').replace(/\s/g, '');
       const name = request.recipient_name || card?.account_name || 'Recipient';
+
+      // validate the FULL international number first
+      if (!cinfo.re.test(mobileFull)) return res.status(400).json({ error: `Payout account "${mobileFull}" is not a valid ${cc} mobile-money number.` });
+
+      // OTPay requires NATIONAL wallet numbers (9–10 digits) — strip country prefix for the gateway
+      const PREFIX = { CM: '237', CI: '225', SN: '221', NG: '234', GH: '233' };
+      const mobile = (PREFIX[cc] && mobileFull.startsWith(PREFIX[cc])) ? mobileFull.slice(PREFIX[cc].length) : mobileFull; const name = request.recipient_name || card?.account_name || 'Recipient';
 
       if (!cinfo.re.test(mobile)) return res.status(400).json({ error: `Payout account "${mobile}" is not a valid ${cc} mobile-money number.` });
 
