@@ -139,11 +139,12 @@ module.exports = async function handler(req, res) {
   const body = req.body || {};
 
   // 🚀 EXTERNAL WEBHOOK INTERCEPTOR (bypasses admin check — UUID payload or signature header)
+  // Admin UI calls ALWAYS include an `action` field — never intercept those
   const sigHeader = req.headers['x-gff-signature'];
   const externalId = body.request_id || body.withdrawal_id ||
     (UUID_RE.test(String(body.merchantOrderId || '')) ? body.merchantOrderId : null) ||
     (UUID_RE.test(String(body.id || '')) ? body.id : null);
-  if (sigHeader !== undefined || (externalId && !body.sign)) {
+  if (!body.action && (sigHeader !== undefined || (externalId && !body.sign))) {
     return handleExternalWebhook(req, res, supabase, externalId);
   }
 
