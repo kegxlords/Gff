@@ -208,15 +208,16 @@ module.exports = async function handler(req, res) {
   const body = req.body || {};
   log('otpay.callback', 'received', { id: body.merchantOrderId || body.request_id || body.id, status: body.status });
 
-  // ===== MODE 1: EXTERNAL WEBHOOK (UUID payload or X-GFF-Signature header, no OTPay sign) =====
+// ===== MODE 1: EXTERNAL WEBHOOK (UUID payload or X-GFF-Signature header, no OTPay sign) =====
+  // Admin UI calls ALWAYS include an `action` field — never intercept those
   const sigHeader = req.headers['x-gff-signature'];
   const externalId = body.request_id || body.withdrawal_id ||
     (UUID_RE.test(String(body.merchantOrderId || '')) ? body.merchantOrderId : null) ||
     (UUID_RE.test(String(body.id || '')) ? body.id : null);
-  if (sigHeader !== undefined || (externalId && !body.sign)) {
+  if (!body.action && (sigHeader !== undefined || (externalId && !body.sign))) {
     return handleExternalWebhook(req, res, supabase, externalId);
   }
-
+  
   // ===== MODE 2: OTPAY WEBHOOK (signature-verified) =====
   if (String(body.merchantId) !== String(CFG.merchantId)) return safe200(res, 'ignored: wrong merchant');
   if (!verifyCb(body)) { log('otpay.callback', 'bad signature'); return safe200(res, 'ignored: bad signature'); }
